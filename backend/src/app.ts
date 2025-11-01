@@ -1,3 +1,5 @@
+import 'reflect-metadata';
+
 import cors from 'cors';
 import express, { Express } from 'express';
 import { DataSource } from 'typeorm';
