@@ -47,21 +47,20 @@ function resolveApiBaseUrl(): string {
 }
 
 const API_BASE_URL = resolveApiBaseUrl();
+const API_PATH_PREFIX = '/api';
 
 const JSON_HEADERS = {
   'Content-Type': 'application/json'
 };
 
 function buildApiUrl(path: string): string {
-  if (!path.startsWith('/')) {
-    path = `/${path}`;
-  }
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
 
   if (!API_BASE_URL) {
-    return path;
+    return `${API_PATH_PREFIX}${normalizedPath}`;
   }
 
-  return `${API_BASE_URL}${path}`;
+  return `${API_BASE_URL}${normalizedPath}`;
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
