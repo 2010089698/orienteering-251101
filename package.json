@@ -6,6 +6,7 @@
     "dev:backend": "tsx watch --env-file backend/.env.development backend/src/server.ts",
     "dev:frontend": "vite --config frontend/vite.config.ts",
     "dev": "concurrently \"npm:dev:backend\" \"npm:dev:frontend\"",
+    "db:reset": "tsx --env-file backend/.env.development backend/src/scripts/resetDatabase.ts",
     "build:backend": "tsc --project tsconfig.json",
     "build:frontend": "vite build --config frontend/vite.config.ts",
     "build": "npm run build:backend && npm run build:frontend",
