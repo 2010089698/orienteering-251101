@@ -40,7 +40,24 @@ export class EventApiError extends Error {
   }
 }
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '');
+function readViteEnv(): string | undefined {
+  try {
+    return Function('return import.meta.env.VITE_API_BASE_URL ?? undefined;')() as string | undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function resolveApiBaseUrl(): string {
+  const fromProcess = typeof process !== 'undefined' ? process.env?.VITE_API_BASE_URL : undefined;
+  const fromGlobal = (globalThis as Record<string, unknown> | undefined)?.VITE_API_BASE_URL as string | undefined;
+  const fromVite = readViteEnv();
+  const raw = fromProcess ?? fromGlobal ?? fromVite ?? '';
+
+  return raw.replace(/\/+$/, '');
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 const JSON_HEADERS = {
   'Content-Type': 'application/json'
@@ -72,7 +89,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
 }
 
 export async function fetchEventCreationDefaults(signal?: AbortSignal): Promise<EventCreationDefaultsResponse> {
-  const response = await fetch(buildApiUrl('/events/defaults'), {
+  const response = await fetch(buildApiUrl('/events/create/defaults'), {
     method: 'GET',
     signal
   });
