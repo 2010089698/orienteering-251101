@@ -14,6 +14,7 @@ export class CreateEventUseCase {
     );
 
     const eventProps: EventProps = {
+      organizerId: command.organizerId,
       id: command.eventId,
       name: command.eventName,
       period: basePeriod,

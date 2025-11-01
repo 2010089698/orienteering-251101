@@ -62,6 +62,9 @@ describe('EventCreatePage', () => {
     renderPage();
     const user = userEvent.setup();
 
+    const organizerIdInput = await screen.findByLabelText('主催者ID');
+    expect(organizerIdInput).toBeInTheDocument();
+
     const eventIdInput = await screen.findByLabelText('イベントID');
     expect(eventIdInput).toBeInTheDocument();
 
@@ -93,6 +96,7 @@ describe('EventCreatePage', () => {
     const { createEvent } = renderPage();
     const user = userEvent.setup();
 
+    await user.type(await screen.findByLabelText('主催者ID'), 'ORG-001');
     await user.type(await screen.findByLabelText('イベントID'), 'E-001');
     await user.type(screen.getByLabelText('イベント名'), '春のオリエンテーリング');
     fireEvent.change(screen.getByLabelText('イベント開始日'), { target: { value: '2024-04-01' } });
@@ -126,6 +130,7 @@ describe('EventCreatePage', () => {
     await waitFor(() => expect(createEvent).toHaveBeenCalled());
     const receivedBody = createEvent.mock.calls[0][0] as CreateEventRequest;
     expect(receivedBody).toMatchObject({
+      organizerId: 'ORG-001',
       eventId: 'E-001',
       eventName: '春のオリエンテーリング',
       startDate: '2024-04-01',
@@ -158,8 +163,8 @@ describe('EventCreatePage', () => {
       fetchDefaults
     });
 
-    const eventIdInput = await screen.findByLabelText('イベントID');
-    expect(eventIdInput).toBeInTheDocument();
+    const organizerIdInput = await screen.findByLabelText('主催者ID');
+    expect(organizerIdInput).toBeInTheDocument();
     expect(screen.queryByText('イベント作成初期設定の取得に失敗しました。')).not.toBeInTheDocument();
   });
 });

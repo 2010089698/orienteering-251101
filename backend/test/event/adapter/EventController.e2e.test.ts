@@ -34,6 +34,7 @@ describe('EventController (E2E)', () => {
     const response = await request(app)
       .post('/events')
       .send({
+        organizerId: 'org-100',
         eventId: 'event-100',
         eventName: 'テスト大会',
         startDate: '2024-04-01',
@@ -58,12 +59,14 @@ describe('EventController (E2E)', () => {
       ]
     });
     expect(repository.events).toHaveLength(1);
+    expect(repository.events[0]?.organizerIdentifier).toBe('org-100');
   });
 
   it('POST /events 異常系: 終了日未指定で複数レースの場合はバリデーションエラー', async () => {
     const response = await request(app)
       .post('/events')
       .send({
+        organizerId: 'org-101',
         eventId: 'event-101',
         eventName: 'エラー大会',
         startDate: '2024-04-01',

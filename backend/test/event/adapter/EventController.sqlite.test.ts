@@ -32,6 +32,7 @@ describe('EventController (SQLite 統合)', () => {
 
   it('POST /events -> GET /events/defaults を実行し、永続化されたイベントとレース日程を検証する', async () => {
     const payload = {
+      organizerId: 'org-sqlite-001',
       eventId: 'event-sqlite-001',
       eventName: '統合テスト大会',
       startDate: '2024-09-14',
@@ -68,6 +69,7 @@ describe('EventController (SQLite 統合)', () => {
     });
 
     const expectedEvent = Event.create({
+      organizerId: payload.organizerId,
       id: payload.eventId,
       name: payload.eventName,
       period: EventPeriod.createFromBoundaries(new Date(payload.startDate), new Date(payload.endDate)),
@@ -80,6 +82,7 @@ describe('EventController (SQLite 統合)', () => {
     const storedEvent = await eventRepository.findOneByOrFail({ id: payload.eventId });
 
     expect(storedEvent.id).toBe(expectedEvent.eventIdentifier);
+    expect(storedEvent.organizerId).toBe(expectedEvent.organizerIdentifier);
     expect(storedEvent.name).toBe(expectedEvent.displayName);
     expect(storedEvent.startDate.toISOString()).toBe(
       expectedEvent.eventDuration.startDate.toISOString()

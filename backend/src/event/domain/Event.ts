@@ -3,6 +3,7 @@ import EventSchedulingService from './EventSchedulingService';
 import RaceSchedule from './RaceSchedule';
 
 export interface EventProps {
+  organizerId: string;
   id: string;
   name: string;
   period: EventPeriod;
@@ -11,6 +12,7 @@ export interface EventProps {
 
 export class Event {
   private constructor(
+    private readonly organizer: string,
     private readonly eventId: string,
     private readonly eventName: string,
     private readonly eventPeriod: EventPeriod,
@@ -20,6 +22,11 @@ export class Event {
   ) {}
 
   public static create(props: EventProps): Event {
+    const organizerId = props.organizerId?.trim();
+    if (!organizerId) {
+      throw new Error('主催者IDを指定してください。');
+    }
+
     const id = props.id?.trim();
     if (!id) {
       throw new Error('イベントIDを指定してください。');
@@ -49,6 +56,7 @@ export class Event {
     );
 
     return new Event(
+      organizerId,
       id,
       name,
       period,
@@ -56,6 +64,10 @@ export class Event {
       isMultiRace,
       Object.freeze([...props.raceSchedules])
     );
+  }
+
+  public get organizerIdentifier(): string {
+    return this.organizer;
   }
 
   public get eventIdentifier(): string {

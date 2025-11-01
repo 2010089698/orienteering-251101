@@ -12,6 +12,11 @@ const EventBasicSection = ({ register, errors, disabled }: EventBasicSectionProp
     <section aria-labelledby="event-basic-section-title">
       <h2 id="event-basic-section-title">イベント基本情報</h2>
       <div>
+        <label htmlFor="organizer-id">主催者ID</label>
+        <input id="organizer-id" type="text" {...register('organizerId')} disabled={disabled} />
+        {errors.organizerId && <p role="alert">{errors.organizerId.message}</p>}
+      </div>
+      <div>
         <label htmlFor="event-id">イベントID</label>
         <input id="event-id" type="text" {...register('eventId')} disabled={disabled} />
         {errors.eventId && <p role="alert">{errors.eventId.message}</p>}

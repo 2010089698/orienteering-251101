@@ -12,6 +12,7 @@ import { EventCreateFormValues, eventCreateSchema } from '../types';
 import type { CreateEventRequest } from '@shared/event/contracts/CreateEventContract';
 
 const DEFAULT_FORM_VALUES: EventCreateFormValues = {
+  organizerId: '',
   eventId: '',
   eventName: '',
   startDate: '',
@@ -67,6 +68,7 @@ export interface EventCreateServiceState {
 
 function mapToRequest(values: EventCreateFormValues): CreateEventRequest {
   return {
+    organizerId: values.organizerId,
     eventId: values.eventId,
     eventName: values.eventName,
     startDate: values.startDate,

@@ -58,6 +58,10 @@ class EventDateConsistencyValidator implements ValidatorConstraintInterface {
 }
 
 class CreateEventRequestDto implements CreateEventRequest {
+  @IsString({ message: '主催者IDは文字列で指定してください。' })
+  @IsNotEmpty({ message: '主催者IDは必須です。' })
+  public organizerId!: string;
+
   @IsString({ message: 'イベントIDは文字列で指定してください。' })
   @IsNotEmpty({ message: 'イベントIDは必須です。' })
   public eventId!: string;
@@ -185,6 +189,7 @@ export class EventController {
     }));
 
     return CreateEventCommand.from({
+      organizerId: dto.organizerId,
       eventId: dto.eventId,
       eventName: dto.eventName,
       startDate: dto.startDate,

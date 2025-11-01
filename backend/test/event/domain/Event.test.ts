@@ -81,6 +81,7 @@ describe('Event', () => {
     const schedule = RaceSchedule.create('Sprint', new Date('2024-04-10'));
 
     const event = Event.create({
+      organizerId: 'org-001',
       id: 'evt-1',
       name: 'Spring Cup',
       period,
@@ -101,6 +102,7 @@ describe('Event', () => {
     const scheduleDay3 = RaceSchedule.create('Relay', new Date('2024-04-12'));
 
     const event = Event.create({
+      organizerId: 'org-002',
       id: 'evt-2',
       name: 'Spring Festival',
       period: basePeriod,
@@ -120,6 +122,7 @@ describe('Event', () => {
 
     expect(() =>
       Event.create({
+        organizerId: 'org-003',
         id: 'evt-3',
         name: 'Duplicated Race',
         period,
@@ -134,6 +137,7 @@ describe('Event', () => {
 
     expect(() =>
       Event.create({
+        organizerId: 'org-004',
         id: '  ',
         name: 'Valid',
         period,
@@ -143,11 +147,27 @@ describe('Event', () => {
 
     expect(() =>
       Event.create({
+        organizerId: 'org-005',
         id: 'evt-4',
         name: '',
         period,
         raceSchedules: [schedule]
       })
     ).toThrow('イベント名を指定してください。');
+  });
+
+  it('主催者IDは必須', () => {
+    const period = EventPeriod.createSingleDay(new Date('2024-04-10'));
+    const schedule = RaceSchedule.create('Sprint', new Date('2024-04-10'));
+
+    expect(() =>
+      Event.create({
+        organizerId: '  ',
+        id: 'evt-5',
+        name: 'Missing Organizer',
+        period,
+        raceSchedules: [schedule]
+      })
+    ).toThrow('主催者IDを指定してください。');
   });
 });
