@@ -6,6 +6,9 @@ import EventController from '../../../src/event/adapter/in/web/EventController';
 import CreateEventUseCase from '../../../src/event/application/command/CreateEventUseCase';
 import EventRepository from '../../../src/event/application/port/out/EventRepository';
 import GetEventCreationDefaultsQueryHandler from '../../../src/event/application/query/GetEventCreationDefaultsQueryHandler';
+import EventListQueryRepository from '../../../src/event/application/port/out/EventListQueryRepository';
+import ListOrganizerEventsQueryHandler from '../../../src/event/application/query/ListOrganizerEventsQueryHandler';
+import EventSummaryResponseDto from '../../../src/event/application/query/EventSummaryResponseDto';
 import Event from '../../../src/event/domain/Event';
 
 class InMemoryEventRepository implements EventRepository {
@@ -16,11 +19,30 @@ class InMemoryEventRepository implements EventRepository {
   }
 }
 
+class InMemoryEventListQueryRepository implements EventListQueryRepository {
+  public events: EventSummaryResponseDto[] = [];
+
+  public requestedOrganizerIds: string[] = [];
+
+  public async findSummariesByOrganizerId(
+    organizerId: string
+  ): Promise<ReadonlyArray<EventSummaryResponseDto>> {
+    this.requestedOrganizerIds.push(organizerId);
+    return [...this.events];
+  }
+}
+
 describe('EventController (E2E)', () => {
   const repository = new InMemoryEventRepository();
   const createEventUseCase = new CreateEventUseCase(repository);
   const defaultsQueryHandler = new GetEventCreationDefaultsQueryHandler();
-  const controller = new EventController(createEventUseCase, defaultsQueryHandler);
+  const eventListQueryRepository = new InMemoryEventListQueryRepository();
+  const listEventsQueryHandler = new ListOrganizerEventsQueryHandler(eventListQueryRepository);
+  const controller = new EventController(
+    createEventUseCase,
+    defaultsQueryHandler,
+    listEventsQueryHandler
+  );
 
   const app = express();
   app.use(express.json());
@@ -28,6 +50,8 @@ describe('EventController (E2E)', () => {
 
   beforeEach(() => {
     repository.events.length = 0;
+    eventListQueryRepository.events = [];
+    eventListQueryRepository.requestedOrganizerIds = [];
   });
 
   it('POST /events 正常系: イベントが作成されレスポンスが返る', async () => {
@@ -79,6 +103,60 @@ describe('EventController (E2E)', () => {
     });
     expect(response.body.errors).toContain('複数レースの場合はイベント終了日を指定してください。');
     expect(repository.events).toHaveLength(0);
+  });
+
+  it('GET /events 正常系: イベント一覧を開催日フォーマットで返す', async () => {
+    eventListQueryRepository.events = [
+      {
+        id: 'event-201',
+        name: 'イベントA',
+        startDate: '2024-05-02T09:00:00.000Z',
+        endDate: '2024-05-03T09:00:00.000Z',
+        isMultiDay: true,
+        isMultiRace: false
+      },
+      {
+        id: 'event-200',
+        name: 'イベントB',
+        startDate: '2024-04-01T00:00:00.000Z',
+        endDate: '2024-04-01T00:00:00.000Z',
+        isMultiDay: false,
+        isMultiRace: false
+      }
+    ];
+
+    const response = await request(app).get('/events').query({ organizerId: 'organizer-001' });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual([
+      {
+        eventId: 'event-201',
+        eventName: 'イベントA',
+        startDate: '2024-05-02',
+        endDate: '2024-05-03',
+        isMultiDayEvent: true,
+        isMultiRaceEvent: false
+      },
+      {
+        eventId: 'event-200',
+        eventName: 'イベントB',
+        startDate: '2024-04-01',
+        endDate: '2024-04-01',
+        isMultiDayEvent: false,
+        isMultiRaceEvent: false
+      }
+    ]);
+    expect(eventListQueryRepository.requestedOrganizerIds).toEqual(['organizer-001']);
+  });
+
+  it('GET /events 正常系: イベントが存在しない場合は空配列を返す', async () => {
+    eventListQueryRepository.events = [];
+
+    const response = await request(app).get('/events').query({ organizerId: 'organizer-002' });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual([]);
+    expect(eventListQueryRepository.requestedOrganizerIds).toEqual(['organizer-002']);
   });
 
   it('GET /events/defaults 初期表示設定を返す', async () => {

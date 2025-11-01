@@ -4,6 +4,7 @@ import request from 'supertest';
 import { DataSource } from 'typeorm';
 
 import { createAppWithDependencies } from '../../../src/app';
+import { DEFAULT_ORGANIZER_ID } from '../../../src/event/application/OrganizerContext';
 import Event from '../../../src/event/domain/Event';
 import EventPeriod from '../../../src/event/domain/EventPeriod';
 import RaceSchedule from '../../../src/event/domain/RaceSchedule';
@@ -81,6 +82,7 @@ describe('EventController (SQLite 統合)', () => {
 
     expect(storedEvent.id).toBe(expectedEvent.eventIdentifier);
     expect(storedEvent.name).toBe(expectedEvent.displayName);
+    expect(storedEvent.organizerId).toBe(DEFAULT_ORGANIZER_ID);
     expect(storedEvent.startDate.toISOString()).toBe(
       expectedEvent.eventDuration.startDate.toISOString()
     );
@@ -102,5 +104,110 @@ describe('EventController (SQLite 統合)', () => {
       expect(stored?.eventId).toBe(expectedEvent.eventIdentifier);
       expect(stored?.scheduledDate.toISOString()).toBe(expectedSchedule.date.toISOString());
     }
+  });
+
+  it('GET /events データが存在する場合にイベント一覧DTOを返す', async () => {
+    const eventRepository = dataSource.getRepository(EventEntity);
+    const stored = eventRepository.create({
+      id: 'event-list-001',
+      name: '一覧テスト大会',
+      organizerId: DEFAULT_ORGANIZER_ID,
+      startDate: new Date('2024-06-01T00:00:00.000Z'),
+      endDate: new Date('2024-06-02T00:00:00.000Z'),
+      isMultiDay: true,
+      isMultiRace: false
+    });
+    await eventRepository.save(stored);
+
+    const response = await request(app)
+      .get('/events')
+      .query({ organizerId: DEFAULT_ORGANIZER_ID });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual([
+      {
+        eventId: 'event-list-001',
+        eventName: '一覧テスト大会',
+        startDate: '2024-06-01',
+        endDate: '2024-06-02',
+        isMultiDayEvent: true,
+        isMultiRaceEvent: false
+      }
+    ]);
+  });
+
+  it('GET /events イベントが存在しない場合は空配列を返す', async () => {
+    const response = await request(app)
+      .get('/events')
+      .query({ organizerId: DEFAULT_ORGANIZER_ID });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual([]);
+  });
+
+  it('GET /events 開催日が早い順にソートして返す', async () => {
+    const eventRepository = dataSource.getRepository(EventEntity);
+    const events = [
+      eventRepository.create({
+        id: 'event-list-010',
+        name: '3日目大会',
+        organizerId: DEFAULT_ORGANIZER_ID,
+        startDate: new Date('2024-08-03T12:00:00.000Z'),
+        endDate: new Date('2024-08-03T12:00:00.000Z'),
+        isMultiDay: false,
+        isMultiRace: false
+      }),
+      eventRepository.create({
+        id: 'event-list-009',
+        name: '1日目大会',
+        organizerId: DEFAULT_ORGANIZER_ID,
+        startDate: new Date('2024-08-01T12:00:00.000Z'),
+        endDate: new Date('2024-08-01T12:00:00.000Z'),
+        isMultiDay: false,
+        isMultiRace: false
+      }),
+      eventRepository.create({
+        id: 'event-list-011',
+        name: '2日目大会',
+        organizerId: DEFAULT_ORGANIZER_ID,
+        startDate: new Date('2024-08-02T12:00:00.000Z'),
+        endDate: new Date('2024-08-02T12:00:00.000Z'),
+        isMultiDay: false,
+        isMultiRace: true
+      })
+    ];
+    await eventRepository.save(events);
+
+    const response = await request(app)
+      .get('/events')
+      .query({ organizerId: DEFAULT_ORGANIZER_ID });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual([
+      {
+        eventId: 'event-list-009',
+        eventName: '1日目大会',
+        startDate: '2024-08-01',
+        endDate: '2024-08-01',
+        isMultiDayEvent: false,
+        isMultiRaceEvent: false
+      },
+      {
+        eventId: 'event-list-011',
+        eventName: '2日目大会',
+        startDate: '2024-08-02',
+        endDate: '2024-08-02',
+        isMultiDayEvent: false,
+        isMultiRaceEvent: true
+      },
+      {
+        eventId: 'event-list-010',
+        eventName: '3日目大会',
+        startDate: '2024-08-03',
+        endDate: '2024-08-03',
+        isMultiDayEvent: false,
+        isMultiRaceEvent: false
+      }
+    ]);
   });
 });

@@ -1,6 +1,7 @@
 import { Column, Entity, OneToMany, PrimaryColumn } from 'typeorm';
 
 import Event from '../../domain/Event';
+import { DEFAULT_ORGANIZER_ID } from '../../application/OrganizerContext';
 import { RaceScheduleEntity } from './RaceScheduleEntity';
 
 @Entity('events')
@@ -10,6 +11,9 @@ export class EventEntity {
 
   @Column({ name: 'name', type: 'text' })
   public name!: string;
+
+  @Column({ name: 'organizer_id', type: 'text' })
+  public organizerId!: string;
 
   @Column({ name: 'start_date', type: 'datetime' })
   public startDate!: Date;
@@ -33,6 +37,7 @@ export function mapEventToEntity(event: Event): EventEntity {
   const entity = new EventEntity();
   entity.id = event.eventIdentifier;
   entity.name = event.displayName;
+  entity.organizerId = DEFAULT_ORGANIZER_ID;
   entity.startDate = event.eventDuration.startDate;
   entity.endDate = event.eventDuration.endDate;
   entity.isMultiDay = event.isMultiDayEvent;
