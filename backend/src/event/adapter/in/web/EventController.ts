@@ -22,6 +22,9 @@ import CreateEventUseCase from '../../../application/command/CreateEventUseCase'
 import { CreateEventCommand, RaceScheduleCommandDto } from '../../../application/command/CreateEventCommand';
 import GetEventCreationDefaultsQuery from '../../../application/query/GetEventCreationDefaultsQuery';
 import GetEventCreationDefaultsQueryHandler from '../../../application/query/GetEventCreationDefaultsQueryHandler';
+import ListOrganizerEventsQuery from '../../../application/query/ListOrganizerEventsQuery';
+import ListOrganizerEventsQueryHandler from '../../../application/query/ListOrganizerEventsQueryHandler';
+import EventSummaryResponseDto from '../../../application/query/EventSummaryResponseDto';
 import RaceSchedule from '../../../domain/RaceSchedule';
 
 class HttpValidationError extends Error {
@@ -110,12 +113,35 @@ export class EventController {
 
   constructor(
     private readonly createEventUseCase: CreateEventUseCase,
-    private readonly defaultsQueryHandler: GetEventCreationDefaultsQueryHandler
+    private readonly defaultsQueryHandler: GetEventCreationDefaultsQueryHandler,
+    private readonly listEventsQueryHandler: ListOrganizerEventsQueryHandler
   ) {
     this.router = Router();
+    this.router.get('/events', this.handleListEvents.bind(this));
     this.router.post('/events', this.handleCreateEvent.bind(this));
     this.router.get('/events/defaults', this.handleGetDefaults.bind(this));
     this.router.get('/events/create/defaults', this.handleLegacyDefaults.bind(this));
+  }
+
+  private async handleListEvents(request: Request, response: Response): Promise<void> {
+    try {
+      const organizerId = this.resolveOrganizerId(request.query.organizerId);
+      const query = ListOrganizerEventsQuery.forOrganizer(organizerId);
+      const summaries = await this.listEventsQueryHandler.execute(query);
+
+      response.status(200).json(summaries.map((summary) => this.mapToListResponse(summary)));
+    } catch (error) {
+      if (error instanceof Error) {
+        response.status(400).json({
+          message: error.message
+        });
+        return;
+      }
+
+      response.status(500).json({
+        message: '不明なエラーが発生しました。'
+      });
+    }
   }
 
   private async handleCreateEvent(request: Request, response: Response): Promise<void> {
@@ -191,6 +217,40 @@ export class EventController {
       endDate: dto.endDate,
       raceSchedules: races
     });
+  }
+
+  private resolveOrganizerId(raw: unknown): string {
+    if (Array.isArray(raw)) {
+      return String(raw[0] ?? '').trim();
+    }
+
+    if (raw === undefined || raw === null) {
+      return '';
+    }
+
+    return String(raw).trim();
+  }
+
+  private mapToListResponse(summary: EventSummaryResponseDto) {
+    const startDate = new Date(summary.startDate);
+    const endDate = new Date(summary.endDate);
+
+    if (Number.isNaN(startDate.getTime())) {
+      throw new Error('イベント開始日の形式が不正です。');
+    }
+
+    if (Number.isNaN(endDate.getTime())) {
+      throw new Error('イベント終了日の形式が不正です。');
+    }
+
+    return {
+      eventId: summary.id,
+      eventName: summary.name,
+      startDate: formatDateOnly(startDate),
+      endDate: formatDateOnly(endDate),
+      isMultiDayEvent: summary.isMultiDay,
+      isMultiRaceEvent: summary.isMultiRace
+    };
   }
 }
 
