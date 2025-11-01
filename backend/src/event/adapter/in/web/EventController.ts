@@ -130,6 +130,7 @@ export class EventController {
     this.router = Router();
     this.router.post('/events', this.handleCreateEvent.bind(this));
     this.router.get('/events/defaults', this.handleGetDefaults.bind(this));
+    this.router.get('/events/create/defaults', this.handleLegacyDefaults.bind(this));
   }
 
   private async handleCreateEvent(request: Request, response: Response): Promise<void> {
@@ -186,6 +187,10 @@ export class EventController {
     const query = GetEventCreationDefaultsQuery.create();
     const defaults = await this.defaultsQueryHandler.execute(query);
     response.status(200).json(defaults);
+  }
+
+  private handleLegacyDefaults(_: Request, response: Response): void {
+    response.redirect(308, '/events/defaults');
   }
 
   private toCommand(dto: CreateEventRequestDto): CreateEventCommand {
