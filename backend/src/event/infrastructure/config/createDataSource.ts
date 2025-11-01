@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import { DataSource } from 'typeorm';
 
+import { DEFAULT_ORGANIZER_ID } from '../../application/OrganizerContext';
 import { EventEntity } from '../repository/EventEntity';
 import { RaceScheduleEntity } from '../repository/RaceScheduleEntity';
 
@@ -72,7 +73,20 @@ export async function createDataSource(
     synchronize: true,
   });
 
-  return await dataSource.initialize();
+  const initializedDataSource = await dataSource.initialize();
+
+  await backfillOrganizerIds(initializedDataSource);
+
+  return initializedDataSource;
 }
 
 export default createDataSource;
+
+async function backfillOrganizerIds(dataSource: DataSource): Promise<void> {
+  await dataSource
+    .createQueryBuilder()
+    .update(EventEntity)
+    .set({ organizerId: DEFAULT_ORGANIZER_ID })
+    .where('organizer_id IS NULL')
+    .execute();
+}
