@@ -3,46 +3,30 @@ import 'reflect-metadata';
 import dotenv from 'dotenv';
 
 import { createApp } from './app';
-import { BackendEnvironment, DatabasePath, loadEnvironment } from './config/environment';
-import {
-  DataSourceLike,
-  EntityManagerLike
-} from './event/infrastructure/repository/TypeOrmEventRepository';
+import { BackendEnvironment, loadEnvironment } from './config/environment';
 
 dotenv.config({ path: '.env.development' });
 
-class InMemoryEntityManager implements EntityManagerLike {
-  public constructor(private readonly storage: unknown[]) {}
-
-  public async save<T>(entity: T): Promise<T> {
-    this.storage.push(entity);
-    return entity;
-  }
-}
-
-class InMemoryDataSource implements DataSourceLike {
-  public constructor(private readonly storage: unknown[], private readonly databasePath: DatabasePath) {}
-
-  public async transaction<T>(work: (manager: EntityManagerLike) => Promise<T>): Promise<T> {
-    const manager = new InMemoryEntityManager(this.storage);
-    return await work(manager);
-  }
-}
-
-function createDataSource(databasePath: DatabasePath): DataSourceLike {
-  return new InMemoryDataSource([], databasePath);
-}
-
-function bootstrap(): void {
+async function bootstrap(): Promise<void> {
   const environment: BackendEnvironment = loadEnvironment(process.env);
-  const app = createApp({ eventDataSource: createDataSource(environment.databasePath) });
 
-  const port = environment.port.value;
+  try {
+    const app = await createApp({
+      databasePath: environment.databasePath.value,
+      resetDatabase: environment.resetDatabase.value,
+    });
 
-  app.listen(port, () => {
+    const port = environment.port.value;
+
+    app.listen(port, () => {
+      // eslint-disable-next-line no-console
+      console.log(`Backend server is running on port ${port}`);
+    });
+  } catch (error: unknown) {
     // eslint-disable-next-line no-console
-    console.log(`Backend server is running on port ${port}`);
-  });
+    console.error('バックエンドアプリケーションの起動に失敗しました。', error);
+    process.exit(1);
+  }
 }
 
-bootstrap();
+void bootstrap();
