@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event';
 import EventCreatePage from '../EventCreatePage';
 import type { CreateEventRequest } from '@shared/event/contracts/CreateEventContract';
+import type { EventCreationDefaultsResponse } from '../../api/eventApi';
 import {
   useEventCreateService,
   type EventCreateServiceFactory,
@@ -146,5 +147,19 @@ describe('EventCreatePage', () => {
     await user.click(cancelButton);
 
     await waitFor(() => expect(screen.getByTestId('events-list-page')).toBeInTheDocument());
+  });
+
+  test('初期設定APIがnullishを返した場合はデフォルト値にフォールバックする', async () => {
+    const fetchDefaults = jest
+      .fn<EventCreateServiceGateway['fetchDefaults']>()
+      .mockResolvedValue(null as unknown as EventCreationDefaultsResponse);
+
+    renderPage({
+      fetchDefaults
+    });
+
+    const eventIdInput = await screen.findByLabelText('イベントID');
+    expect(eventIdInput).toBeInTheDocument();
+    expect(screen.queryByText('イベント作成初期設定の取得に失敗しました。')).not.toBeInTheDocument();
   });
 });
