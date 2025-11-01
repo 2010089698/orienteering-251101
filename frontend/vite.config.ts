@@ -10,9 +10,10 @@ export default defineConfig({
   server: {
     port: frontendPort,
     proxy: {
-      '/events': {
+      '/api/events': {
         target: `http://localhost:${backendPort}`,
         changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },
   },

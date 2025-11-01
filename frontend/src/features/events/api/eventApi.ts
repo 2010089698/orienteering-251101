@@ -44,6 +44,8 @@ const JSON_HEADERS = {
   'Content-Type': 'application/json'
 };
 
+const EVENTS_API_BASE_PATH = '/api/events';
+
 async function handleResponse<T>(response: Response): Promise<T> {
   const contentType = response.headers.get('Content-Type');
   const isJson = contentType && contentType.includes('application/json');
@@ -58,7 +60,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
 }
 
 export async function fetchEventCreationDefaults(signal?: AbortSignal): Promise<EventCreationDefaultsResponse> {
-  const response = await fetch('/events/create/defaults', {
+  const response = await fetch(`${EVENTS_API_BASE_PATH}/create/defaults`, {
     method: 'GET',
     signal
   });
@@ -69,7 +71,7 @@ export async function postCreateEvent(
   dto: CreateEventRequestDto,
   signal?: AbortSignal
 ): Promise<CreateEventResponseDto> {
-  const response = await fetch('/events', {
+  const response = await fetch(EVENTS_API_BASE_PATH, {
     method: 'POST',
     headers: JSON_HEADERS,
     body: JSON.stringify(dto),
