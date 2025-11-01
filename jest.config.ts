@@ -6,7 +6,10 @@ const config: Config = {
       displayName: 'backend',
       preset: 'ts-jest',
       testEnvironment: 'node',
-      testMatch: ['**/backend/test/**/*.test.ts']
+      testMatch: ['**/backend/test/**/*.test.ts'],
+      moduleNameMapper: {
+        '^@shared/(.*)$': '<rootDir>/shared/$1'
+      }
     },
     {
       displayName: 'frontend',
@@ -18,6 +21,9 @@ const config: Config = {
       extensionsToTreatAsEsm: ['.ts', '.tsx'],
       transform: {
         '^.+\\.(ts|tsx)$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.jest.json', useESM: true }]
+      },
+      moduleNameMapper: {
+        '^@shared/(.*)$': '<rootDir>/../shared/$1'
       }
     }
   ]

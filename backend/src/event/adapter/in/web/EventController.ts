@@ -13,6 +13,11 @@ import {
 } from 'class-validator';
 import { plainToInstance, Type } from 'class-transformer';
 import { ValidatorConstraint, ValidatorConstraintInterface, ValidationArguments, Validate } from 'class-validator';
+import type {
+  CreateEventRequest,
+  RaceScheduleRequest
+} from '@shared/event/contracts/CreateEventContract';
+import { collectCreateEventDateIssues } from '@shared/event/contracts/CreateEventContract';
 import CreateEventUseCase from '../../../application/command/CreateEventUseCase';
 import { CreateEventCommand, RaceScheduleCommandDto } from '../../../application/command/CreateEventCommand';
 import GetEventCreationDefaultsQuery from '../../../application/query/GetEventCreationDefaultsQuery';
@@ -25,7 +30,7 @@ class HttpValidationError extends Error {
   }
 }
 
-class RaceScheduleRequestDto {
+class RaceScheduleRequestDto implements RaceScheduleRequest {
   @IsString({ message: 'レース名は文字列で指定してください。' })
   @IsNotEmpty({ message: 'レース名は必須です。' })
   public name!: string;
@@ -38,41 +43,21 @@ class RaceScheduleRequestDto {
 class EventDateConsistencyValidator implements ValidatorConstraintInterface {
   public validate(_: unknown, args: ValidationArguments): boolean {
     const dto = args.object as CreateEventRequestDto;
-
-    if (!dto.startDate) {
-      return false;
-    }
-
-    if (dto.endDate) {
-      const start = new Date(dto.startDate);
-      const end = new Date(dto.endDate);
-      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-        return false;
-      }
-      if (end.getTime() < start.getTime()) {
-        return false;
-      }
-    }
-
-    if (!dto.endDate && dto.raceSchedules && dto.raceSchedules.length > 1) {
-      return false;
-    }
-
-    return true;
+    return collectCreateEventDateIssues(dto).length === 0;
   }
 
   public defaultMessage(args: ValidationArguments): string {
     const dto = args.object as CreateEventRequestDto;
-
-    if (dto.raceSchedules && dto.raceSchedules.length > 1 && !dto.endDate) {
-      return '複数レースの場合はイベント終了日を指定してください。';
+    const [firstIssue] = collectCreateEventDateIssues(dto);
+    if (firstIssue) {
+      return firstIssue.message;
     }
 
     return 'イベント終了日は開始日以降の日付を指定してください。';
   }
 }
 
-class CreateEventRequestDto {
+class CreateEventRequestDto implements CreateEventRequest {
   @IsString({ message: 'イベントIDは文字列で指定してください。' })
   @IsNotEmpty({ message: 'イベントIDは必須です。' })
   public eventId!: string;

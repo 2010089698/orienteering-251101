@@ -6,13 +6,8 @@ import EventBasicSection from './EventBasicSection';
 import MultiDaySection from './MultiDaySection';
 import RaceListSection from './RaceListSection';
 import { EventCreateFormValues, eventCreateSchema } from './types';
-import {
-  CreateEventRequestDto,
-  EventApiError,
-  EventCreationDefaultsResponse,
-  fetchEventCreationDefaults,
-  postCreateEvent
-} from '../api/eventApi';
+import { EventApiError, EventCreationDefaultsResponse, fetchEventCreationDefaults, postCreateEvent } from '../api/eventApi';
+import type { CreateEventRequest } from '@shared/event/contracts/CreateEventContract';
 
 const DEFAULT_FORM_VALUES: EventCreateFormValues = {
   eventId: '',
@@ -177,7 +172,7 @@ const EventCreatePage = () => {
     [defaults.minRaceSchedules, fields.length, remove]
   );
 
-  const mapToRequest = (values: EventCreateFormValues): CreateEventRequestDto => ({
+  const mapToRequest = (values: EventCreateFormValues): CreateEventRequest => ({
     eventId: values.eventId,
     eventName: values.eventName,
     startDate: values.startDate,
