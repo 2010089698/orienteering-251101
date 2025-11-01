@@ -1,55 +1,59 @@
-import { rest } from 'msw';
-import { setupServer } from 'msw/node';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import EventCreatePage from '../EventCreatePage';
 import type { CreateEventRequest } from '@shared/event/contracts/CreateEventContract';
+import {
+  useEventCreateService,
+  type EventCreateServiceFactory,
+  type EventCreateServiceGateway
+} from '../application/useEventCreateService';
 
-const server = setupServer(
-  rest.get('/events/create/defaults', (_req, res, ctx) =>
-    res(
-      ctx.json({
-        dateFormat: 'YYYY-MM-DD',
-        timezone: 'UTC',
-        minRaceSchedules: 1,
-        maxRaceSchedules: 3,
-        requireEndDateForMultipleRaces: true
-      })
-    )
-  ),
-  rest.post('/events', (_req, res, ctx) =>
-    res(
-      ctx.status(201),
-      ctx.json({
-        eventId: 'E-001',
-        eventName: 'テストイベント',
-        startDate: '2024-04-01',
-        endDate: '2024-04-02',
-        isMultiDayEvent: true,
-        isMultiRaceEvent: true,
-        raceSchedules: [
-          { name: 'Day1 Sprint', date: '2024-04-01' },
-          { name: 'Day2 Middle', date: '2024-04-02' }
-        ]
-      })
-    )
-  )
-);
+const DEFAULT_GATEWAY_RESPONSE = {
+  dateFormat: 'YYYY-MM-DD',
+  timezone: 'UTC',
+  minRaceSchedules: 1,
+  maxRaceSchedules: 3,
+  requireEndDateForMultipleRaces: true
+};
 
-beforeAll(() => server.listen());
-afterEach(() => server.resetHandlers());
-afterAll(() => server.close());
+const renderPage = (gatewayOverrides?: Partial<EventCreateServiceGateway>) => {
+  const fetchDefaults = jest.fn().mockResolvedValue(DEFAULT_GATEWAY_RESPONSE);
+  const createEvent = jest.fn().mockResolvedValue({
+    eventId: 'E-001',
+    eventName: 'テストイベント',
+    startDate: '2024-04-01',
+    endDate: '2024-04-02',
+    isMultiDayEvent: true,
+    isMultiRaceEvent: true,
+    raceSchedules: [
+      { name: 'Day1 Sprint', date: '2024-04-01' },
+      { name: 'Day2 Middle', date: '2024-04-02' }
+    ]
+  });
 
-const renderPage = () => {
-  return render(
+  const gateway: EventCreateServiceGateway = {
+    fetchDefaults,
+    createEvent,
+    ...gatewayOverrides
+  };
+
+  const serviceFactory: EventCreateServiceFactory = (options) =>
+    useEventCreateService({
+      ...options,
+      gateway
+    });
+
+  const renderResult = render(
     <MemoryRouter initialEntries={['/events/create']}>
       <Routes>
-        <Route path="/events/create" element={<EventCreatePage />} />
+        <Route path="/events/create" element={<EventCreatePage serviceFactory={serviceFactory} />} />
         <Route path="/events" element={<div data-testid="events-list-page">イベント一覧</div>} />
       </Routes>
     </MemoryRouter>
   );
+
+  return { fetchDefaults, createEvent, renderResult };
 };
 
 describe('EventCreatePage', () => {
@@ -85,30 +89,7 @@ describe('EventCreatePage', () => {
   });
 
   test('イベントを送信するとAPIが呼び出され一覧に遷移する', async () => {
-    let receivedBody: CreateEventRequest | undefined;
-
-    server.use(
-      rest.post('/events', async (req, res, ctx) => {
-        receivedBody = (await req.json()) as CreateEventRequest;
-        return res(
-          ctx.status(201),
-          ctx.json({
-            eventId: 'E-001',
-            eventName: 'テストイベント',
-            startDate: '2024-04-01',
-            endDate: '2024-04-02',
-            isMultiDayEvent: true,
-            isMultiRaceEvent: true,
-            raceSchedules: [
-              { name: 'Day1 Sprint', date: '2024-04-01' },
-              { name: 'Day2 Middle', date: '2024-04-02' }
-            ]
-          })
-        );
-      })
-    );
-
-    renderPage();
+    const { createEvent } = renderPage();
     const user = userEvent.setup();
 
     await user.type(await screen.findByLabelText('イベントID'), 'E-001');
@@ -141,7 +122,8 @@ describe('EventCreatePage', () => {
 
     await user.click(screen.getByRole('button', { name: '保存' }));
 
-    await waitFor(() => expect(receivedBody).toBeDefined());
+    await waitFor(() => expect(createEvent).toHaveBeenCalled());
+    const receivedBody = createEvent.mock.calls[0][0] as CreateEventRequest;
     expect(receivedBody).toMatchObject({
       eventId: 'E-001',
       eventName: '春のオリエンテーリング',
