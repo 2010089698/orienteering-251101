@@ -27,6 +27,13 @@ export default defineConfig(({ mode }) => {
         '/events': {
           target: `http://localhost:${backendPort}`,
           changeOrigin: true,
+          bypass: (req) => {
+            if (req.headers?.accept?.includes('text/html')) {
+              return '/index.html';
+            }
+
+            return null;
+          },
         },
       },
     },
