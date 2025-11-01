@@ -45,8 +45,8 @@ function resolveApiBaseUrl(): string {
   const fromGlobal = (globalThis as Record<string, unknown> | undefined)?.VITE_API_BASE_URL as string | undefined;
   const fromVite = (() => {
     try {
-      // eslint-disable-next-line no-new-func, @typescript-eslint/no-implied-eval
-      const meta = Function('return import.meta')() as ImportMeta | undefined;
+      // eslint-disable-next-line no-eval
+      const meta = eval('import.meta') as ImportMeta | undefined;
       return meta?.env?.VITE_API_BASE_URL;
     } catch {
       return undefined;
