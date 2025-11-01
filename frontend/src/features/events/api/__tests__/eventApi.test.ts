@@ -46,6 +46,7 @@ describe('eventApi handleResponse', () => {
 
   test('イベント作成APIが空レスポンスを返した場合は例外を投げる', async () => {
     const requestBody: CreateEventRequest = {
+      organizerId: 'ORG-001',
       eventId: 'EVT-001',
       eventName: 'テストイベント',
       startDate: '2024-04-01',

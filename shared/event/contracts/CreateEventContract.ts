@@ -23,6 +23,7 @@ export const raceScheduleRequestSchema = z.object({
 export type RaceScheduleRequest = z.infer<typeof raceScheduleRequestSchema>;
 
 export const createEventRequestBaseSchema = z.object({
+  organizerId: createRequiredStringSchema('主催者IDは必須です。'),
   eventId: createRequiredStringSchema('イベントIDは必須です。'),
   eventName: createRequiredStringSchema('イベント名は必須です。'),
   startDate: createIsoDateSchema('イベント開始日は必須です。', 'イベント開始日はISO8601形式で指定してください。'),

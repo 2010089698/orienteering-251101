@@ -4,6 +4,7 @@ export interface RaceScheduleCommandDto {
 }
 
 export interface CreateEventCommandProps {
+  readonly organizerId: string;
   readonly eventId: string;
   readonly eventName: string;
   readonly startDate: string;
@@ -28,6 +29,10 @@ export class CreateEventCommand {
 
   public get eventId(): string {
     return this.props.eventId;
+  }
+
+  public get organizerId(): string {
+    return this.props.organizerId;
   }
 
   public get eventName(): string {

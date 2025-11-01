@@ -16,6 +16,7 @@ describe('CreateEventUseCase', () => {
     const useCase = new CreateEventUseCase(repository);
 
     const command = CreateEventCommand.from({
+      organizerId: 'org-001',
       eventId: 'event-001',
       eventName: '春季オリエンテーリング',
       startDate: '2024-04-01',
@@ -28,6 +29,7 @@ describe('CreateEventUseCase', () => {
 
     const event = await useCase.execute(command);
 
+    expect(event.organizerIdentifier).toBe('org-001');
     expect(event.eventIdentifier).toBe('event-001');
     expect(event.displayName).toBe('春季オリエンテーリング');
     expect(event.isMultiDayEvent).toBe(true);
@@ -42,6 +44,7 @@ describe('CreateEventUseCase', () => {
     const useCase = new CreateEventUseCase(repository);
 
     const command = CreateEventCommand.from({
+      organizerId: 'org-002',
       eventId: 'event-002',
       eventName: '秋季大会',
       startDate: 'invalid-date',

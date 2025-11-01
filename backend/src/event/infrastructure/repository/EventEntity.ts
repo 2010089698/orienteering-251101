@@ -8,6 +8,9 @@ export class EventEntity {
   @PrimaryColumn({ name: 'id', type: 'text' })
   public id!: string;
 
+  @Column({ name: 'organizer_id', type: 'text' })
+  public organizerId!: string;
+
   @Column({ name: 'name', type: 'text' })
   public name!: string;
 
@@ -32,6 +35,7 @@ export class EventEntity {
 export function mapEventToEntity(event: Event): EventEntity {
   const entity = new EventEntity();
   entity.id = event.eventIdentifier;
+  entity.organizerId = event.organizerIdentifier;
   entity.name = event.displayName;
   entity.startDate = event.eventDuration.startDate;
   entity.endDate = event.eventDuration.endDate;
