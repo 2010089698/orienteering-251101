@@ -105,7 +105,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
 }
 
 export async function fetchEventCreationDefaults(signal?: AbortSignal): Promise<EventCreationDefaultsResponse> {
-  const response = await fetch(buildApiUrl('/events/create/defaults'), {
+  const response = await fetch(buildApiUrl('/events/defaults'), {
     method: 'GET',
     signal
   });
