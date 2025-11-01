@@ -6,8 +6,10 @@ import userEvent from '@testing-library/user-event';
 import EventCreatePage from '../EventCreatePage';
 import { CreateEventRequestDto } from '../../api/eventApi';
 
+const EVENTS_API_BASE_PATH = '/api/events';
+
 const server = setupServer(
-  rest.get('/events/create/defaults', (_req, res, ctx) =>
+  rest.get(`${EVENTS_API_BASE_PATH}/create/defaults`, (_req, res, ctx) =>
     res(
       ctx.json({
         dateFormat: 'YYYY-MM-DD',
@@ -18,7 +20,7 @@ const server = setupServer(
       })
     )
   ),
-  rest.post('/events', (_req, res, ctx) =>
+  rest.post(EVENTS_API_BASE_PATH, (_req, res, ctx) =>
     res(
       ctx.status(201),
       ctx.json({
@@ -88,7 +90,7 @@ describe('EventCreatePage', () => {
     let receivedBody: CreateEventRequestDto | undefined;
 
     server.use(
-      rest.post('/events', async (req, res, ctx) => {
+      rest.post(EVENTS_API_BASE_PATH, async (req, res, ctx) => {
         receivedBody = (await req.json()) as CreateEventRequestDto;
         return res(
           ctx.status(201),
