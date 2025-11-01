@@ -146,7 +146,8 @@ export const useEventCreateService = (
         if (!mounted || abortController.signal.aborted) {
           return;
         }
-        setDefaults(response);
+        const nextDefaults = response ?? DEFAULT_EVENT_LIMITS;
+        setDefaults(nextDefaults);
         defaultsInitializedRef.current = false;
       })
       .catch((error) => {
