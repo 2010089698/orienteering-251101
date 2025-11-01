@@ -19,9 +19,10 @@ export default defineConfig(({ mode }) => {
     server: {
       port: frontendPort,
       proxy: {
-        '/events': {
+        '/api': {
           target: `http://localhost:${backendPort}`,
           changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api/, ''),
         },
       },
     },
