@@ -1,22 +1,11 @@
+import type { CreateEventRequest, RaceScheduleRequest } from '@shared/event/contracts/CreateEventContract';
+
 export interface EventCreationDefaultsResponse {
   dateFormat: string;
   timezone: string;
   minRaceSchedules: number;
   maxRaceSchedules: number;
   requireEndDateForMultipleRaces: boolean;
-}
-
-export interface RaceScheduleRequestDto {
-  name: string;
-  date: string;
-}
-
-export interface CreateEventRequestDto {
-  eventId: string;
-  eventName: string;
-  startDate: string;
-  endDate?: string;
-  raceSchedules: RaceScheduleRequestDto[];
 }
 
 export interface CreateEventResponseDto {
@@ -26,7 +15,7 @@ export interface CreateEventResponseDto {
   endDate: string;
   isMultiDayEvent: boolean;
   isMultiRaceEvent: boolean;
-  raceSchedules: RaceScheduleRequestDto[];
+  raceSchedules: RaceScheduleRequest[];
 }
 
 export class EventApiError extends Error {
@@ -97,7 +86,7 @@ export async function fetchEventCreationDefaults(signal?: AbortSignal): Promise<
 }
 
 export async function postCreateEvent(
-  dto: CreateEventRequestDto,
+  dto: CreateEventRequest,
   signal?: AbortSignal
 ): Promise<CreateEventResponseDto> {
   const response = await fetch(buildApiUrl('/events'), {

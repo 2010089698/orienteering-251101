@@ -1,58 +1,45 @@
 import { z } from 'zod';
+import {
+  collectCreateEventDateIssues,
+  createEventRequestBaseSchema,
+  raceScheduleRequestSchema
+} from '@shared/event/contracts/CreateEventContract';
 
-export const raceFormSchema = z.object({
-  name: z.string().min(1, 'レース名を入力してください。'),
-  date: z.string().min(1, 'レース日程を入力してください。')
-});
+export const raceFormSchema = raceScheduleRequestSchema;
 
-export const eventCreateSchema = z
-  .object({
-    eventId: z.string().min(1, 'イベントIDを入力してください。'),
-    eventName: z.string().min(1, 'イベント名を入力してください。'),
-    startDate: z.string().min(1, 'イベント開始日を入力してください。'),
-    endDate: z.string().optional(),
+export const eventCreateSchema = createEventRequestBaseSchema
+  .extend({
     isMultiDay: z.boolean(),
-    isMultiRace: z.boolean(),
-    raceSchedules: z.array(raceFormSchema).min(1, 'レースは1件以上必要です。')
+    isMultiRace: z.boolean()
   })
   .superRefine((data, ctx) => {
-    const start = new Date(data.startDate);
+    const baseIssues = collectCreateEventDateIssues(data);
+    const hasEndDateIssue = baseIssues.some((issue) => issue.path.length === 1 && issue.path[0] === 'endDate');
 
-    if (Number.isNaN(start.getTime())) {
+    for (const issue of baseIssues) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['startDate'],
-        message: '開始日は有効な日付形式で入力してください。'
+        path: issue.path,
+        message: issue.message
       });
+    }
+
+    const start = new Date(data.startDate);
+    if (Number.isNaN(start.getTime())) {
       return;
     }
 
-    const trimmedEndDate = data.endDate?.trim();
-    const hasEndDate = Boolean(trimmedEndDate);
+    const endDateValue = data.endDate ? new Date(data.endDate) : undefined;
+    if (endDateValue && Number.isNaN(endDateValue.getTime())) {
+      return;
+    }
 
-    if ((data.isMultiDay || data.isMultiRace || data.raceSchedules.length > 1) && !hasEndDate) {
+    if ((data.isMultiDay || data.isMultiRace) && !data.endDate && !hasEndDateIssue) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['endDate'],
         message: '複数日または複数レースの場合は終了日を指定してください。'
       });
-    }
-
-    if (hasEndDate) {
-      const end = new Date(trimmedEndDate!);
-      if (Number.isNaN(end.getTime())) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['endDate'],
-          message: '終了日は有効な日付形式で入力してください。'
-        });
-      } else if (end.getTime() < start.getTime()) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['endDate'],
-          message: '終了日は開始日以降の日付を指定してください。'
-        });
-      }
     }
 
     if (data.raceSchedules.length > 1 && !data.isMultiRace) {
@@ -63,20 +50,10 @@ export const eventCreateSchema = z
       });
     }
 
-    const endDateValue = trimmedEndDate ? new Date(trimmedEndDate) : undefined;
-
     data.raceSchedules.forEach((race, index) => {
       const raceDate = new Date(race.date);
-      if (Number.isNaN(raceDate.getTime())) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['raceSchedules', index, 'date'],
-          message: 'レース日程は有効な日付形式で入力してください。'
-        });
-        return;
-      }
 
-      if (!hasEndDate && !data.isMultiDay && race.date !== data.startDate) {
+      if (!data.isMultiDay && !data.endDate && race.date !== data.startDate) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['raceSchedules', index, 'date'],

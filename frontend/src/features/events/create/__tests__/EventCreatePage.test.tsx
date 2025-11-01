@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import EventCreatePage from '../EventCreatePage';
-import { CreateEventRequestDto } from '../../api/eventApi';
+import type { CreateEventRequest } from '@shared/event/contracts/CreateEventContract';
 
 const server = setupServer(
   rest.get('/events/create/defaults', (_req, res, ctx) =>
@@ -85,11 +85,11 @@ describe('EventCreatePage', () => {
   });
 
   test('イベントを送信するとAPIが呼び出され一覧に遷移する', async () => {
-    let receivedBody: CreateEventRequestDto | undefined;
+    let receivedBody: CreateEventRequest | undefined;
 
     server.use(
       rest.post('/events', async (req, res, ctx) => {
-        receivedBody = (await req.json()) as CreateEventRequestDto;
+        receivedBody = (await req.json()) as CreateEventRequest;
         return res(
           ctx.status(201),
           ctx.json({
