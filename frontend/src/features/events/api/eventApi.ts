@@ -40,9 +40,23 @@ export class EventApiError extends Error {
   }
 }
 
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '');
+
 const JSON_HEADERS = {
   'Content-Type': 'application/json'
 };
+
+function buildApiUrl(path: string): string {
+  if (!path.startsWith('/')) {
+    path = `/${path}`;
+  }
+
+  if (!API_BASE_URL) {
+    return path;
+  }
+
+  return `${API_BASE_URL}${path}`;
+}
 
 async function handleResponse<T>(response: Response): Promise<T> {
   const contentType = response.headers.get('Content-Type');
@@ -58,7 +72,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
 }
 
 export async function fetchEventCreationDefaults(signal?: AbortSignal): Promise<EventCreationDefaultsResponse> {
-  const response = await fetch('/events/create/defaults', {
+  const response = await fetch(buildApiUrl('/events/defaults'), {
     method: 'GET',
     signal
   });
@@ -69,7 +83,7 @@ export async function postCreateEvent(
   dto: CreateEventRequestDto,
   signal?: AbortSignal
 ): Promise<CreateEventResponseDto> {
-  const response = await fetch('/events', {
+  const response = await fetch(buildApiUrl('/events'), {
     method: 'POST',
     headers: JSON_HEADERS,
     body: JSON.stringify(dto),
