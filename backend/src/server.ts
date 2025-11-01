@@ -1,11 +1,15 @@
 import 'reflect-metadata';
 
+import path from 'node:path';
+
 import dotenv from 'dotenv';
 
 import { createApp } from './app';
 import { BackendEnvironment, loadEnvironment } from './config/environment';
 
-dotenv.config({ path: '.env.development' });
+const envFilePath = path.resolve(__dirname, '../.env.development');
+
+dotenv.config({ path: envFilePath });
 
 async function bootstrap(): Promise<void> {
   const environment: BackendEnvironment = loadEnvironment(process.env);

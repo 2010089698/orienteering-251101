@@ -10,10 +10,15 @@ const config: Config = {
     },
     {
       displayName: 'frontend',
+      rootDir: '<rootDir>/frontend',
       preset: 'ts-jest',
       testEnvironment: 'jsdom',
-      testMatch: ['**/frontend/src/**/*.test.ts', '**/frontend/src/**/*.test.tsx'],
-      setupFilesAfterEnv: ['<rootDir>/frontend/jest.setup.ts']
+      testMatch: ['<rootDir>/src/**/*.test.ts', '<rootDir>/src/**/*.test.tsx'],
+      setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
+      extensionsToTreatAsEsm: ['.ts', '.tsx'],
+      transform: {
+        '^.+\\.(ts|tsx)$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.jest.json', useESM: true }]
+      }
     }
   ]
 };
