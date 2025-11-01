@@ -1,15 +1,15 @@
 import cors from 'cors';
 import express, { Express } from 'express';
+import { DataSource } from 'typeorm';
 
 import { EventController } from './event/adapter/in/web';
 import CreateEventUseCase from './event/application/command/CreateEventUseCase';
 import GetEventCreationDefaultsQueryHandler from './event/application/query/GetEventCreationDefaultsQueryHandler';
-import TypeOrmEventRepository, {
-  DataSourceLike
-} from './event/infrastructure/repository/TypeOrmEventRepository';
+import { createDataSource, DataSourceFactoryOptions } from './event/infrastructure/config/createDataSource';
+import TypeOrmEventRepository from './event/infrastructure/repository/TypeOrmEventRepository';
 
 export interface ApplicationDependencies {
-  readonly eventDataSource: DataSourceLike;
+  readonly eventDataSource: DataSource;
 }
 
 function assembleEventModule(app: Express, dependencies: ApplicationDependencies): void {
@@ -21,7 +21,7 @@ function assembleEventModule(app: Express, dependencies: ApplicationDependencies
   app.use(eventController.router);
 }
 
-export function createApp(dependencies: ApplicationDependencies): Express {
+function buildExpressApp(dependencies: ApplicationDependencies): Express {
   const app = express();
 
   app.use(cors());
@@ -31,5 +31,27 @@ export function createApp(dependencies: ApplicationDependencies): Express {
 
   return app;
 }
+
+async function initializeDependencies(
+  options: DataSourceFactoryOptions
+): Promise<ApplicationDependencies> {
+  const eventDataSource = await createDataSource(options);
+  return { eventDataSource };
+}
+
+export async function createApp(
+  options: DataSourceFactoryOptions = {}
+): Promise<Express> {
+  try {
+    const dependencies = await initializeDependencies(options);
+    return buildExpressApp(dependencies);
+  } catch (error: unknown) {
+    // eslint-disable-next-line no-console
+    console.error('アプリケーションの初期化に失敗しました。', error);
+    throw error;
+  }
+}
+
+export { buildExpressApp as createAppWithDependencies };
 
 export default createApp;

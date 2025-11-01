@@ -36,7 +36,7 @@ export class DatabasePath {
   }
 
   private static defaultPath(): string {
-    return path.resolve('var', 'data', 'orienteering.sqlite');
+    return path.resolve('var', 'data', 'dev.sqlite');
   }
 
   public get value(): string {
@@ -44,14 +44,32 @@ export class DatabasePath {
   }
 }
 
+export class ResetDatabaseFlag {
+  private constructor(private readonly shouldReset: boolean) {}
+
+  public static from(value: string | undefined): ResetDatabaseFlag {
+    if (!value) {
+      return new ResetDatabaseFlag(false);
+    }
+
+    return new ResetDatabaseFlag(value.trim().toLowerCase() === 'true');
+  }
+
+  public get value(): boolean {
+    return this.shouldReset;
+  }
+}
+
 export interface BackendEnvironment {
   readonly port: BackendPort;
   readonly databasePath: DatabasePath;
+  readonly resetDatabase: ResetDatabaseFlag;
 }
 
 export function loadEnvironment(env: NodeJS.ProcessEnv): BackendEnvironment {
   const port = BackendPort.from(env.BACKEND_PORT);
-  const databasePath = DatabasePath.from(env.EVENT_DATABASE_PATH ?? env.DATABASE_PATH);
+  const databasePath = DatabasePath.from(env.DB_PATH ?? env.EVENT_DATABASE_PATH ?? env.DATABASE_PATH);
+  const resetDatabase = ResetDatabaseFlag.from(env.RESET_DB);
 
-  return { port, databasePath };
+  return { port, databasePath, resetDatabase };
 }
