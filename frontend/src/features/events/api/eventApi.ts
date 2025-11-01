@@ -40,18 +40,16 @@ export class EventApiError extends Error {
   }
 }
 
-function readViteEnv(): string | undefined {
-  try {
-    return Function('return import.meta.env.VITE_API_BASE_URL ?? undefined;')() as string | undefined;
-  } catch {
-    return undefined;
-  }
-}
-
 function resolveApiBaseUrl(): string {
   const fromProcess = typeof process !== 'undefined' ? process.env?.VITE_API_BASE_URL : undefined;
   const fromGlobal = (globalThis as Record<string, unknown> | undefined)?.VITE_API_BASE_URL as string | undefined;
-  const fromVite = readViteEnv();
+  const fromVite = (() => {
+    try {
+      return (import.meta as ImportMeta | undefined)?.env?.VITE_API_BASE_URL;
+    } catch {
+      return undefined;
+    }
+  })();
   const raw = fromProcess ?? fromGlobal ?? fromVite ?? '';
 
   return raw.replace(/\/+$/, '');
