@@ -33,19 +33,10 @@ export class EventApiError extends Error {
   }
 }
 
-function readViteEnvVar(key: string): string | undefined {
-  try {
-    return Function(`return import.meta.env.${key} ?? undefined;`)() as string | undefined;
-  } catch {
-    return undefined;
-  }
-}
-
 function resolveApiBaseUrl(): string {
   const fromProcess = typeof process !== 'undefined' ? process.env?.VITE_API_BASE_URL : undefined;
   const fromGlobal = (globalThis as Record<string, unknown> | undefined)?.VITE_API_BASE_URL as string | undefined;
-  const fromVite = readViteEnvVar('VITE_API_BASE_URL');
-  const raw = fromProcess ?? fromGlobal ?? fromVite ?? '';
+  const raw = fromProcess ?? fromGlobal ?? '';
 
   return raw.replace(/\/+$/, '');
 }
@@ -53,8 +44,7 @@ function resolveApiBaseUrl(): string {
 function resolveOrganizerId(): string | undefined {
   const fromProcess = typeof process !== 'undefined' ? process.env?.VITE_ORGANIZER_ID : undefined;
   const fromGlobal = (globalThis as Record<string, unknown> | undefined)?.VITE_ORGANIZER_ID as string | undefined;
-  const fromVite = readViteEnvVar('VITE_ORGANIZER_ID');
-  const raw = fromProcess ?? fromGlobal ?? fromVite;
+  const raw = fromProcess ?? fromGlobal;
 
   if (typeof raw !== 'string') {
     return undefined;
