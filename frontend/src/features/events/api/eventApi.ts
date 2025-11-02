@@ -34,11 +34,18 @@ export class EventApiError extends Error {
 }
 
 function readViteEnvVar(key: string): string | undefined {
-  try {
-    return Function(`return import.meta.env.${key} ?? undefined;`)() as string | undefined;
-  } catch {
-    return undefined;
+  // @ts-expect-error -- import.meta is provided by Vite at runtime but not recognized under the CommonJS module target.
+  if (typeof import.meta !== 'undefined' && typeof import.meta.env === 'object') {
+    // @ts-expect-error -- See above comment regarding CommonJS compilation.
+    const env = import.meta.env as ImportMetaEnv & Record<string, unknown>;
+    const value = env[key as keyof ImportMetaEnv] ?? env[key];
+
+    if (typeof value === 'string') {
+      return value;
+    }
   }
+
+  return undefined;
 }
 
 function resolveApiBaseUrl(): string {
