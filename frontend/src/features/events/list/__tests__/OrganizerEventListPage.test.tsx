@@ -33,6 +33,13 @@ describe('OrganizerEventListPage', () => {
     expect(retry).toHaveBeenCalledTimes(1);
   });
 
+  test('主催者ID未設定エラーのメッセージを表示する', () => {
+    const message = '主催者ID設定が必要です。環境変数 VITE_ORGANIZER_ID を設定してください。';
+    renderWithState({ events: [], loading: false, error: message, retry: jest.fn() });
+
+    expect(screen.getByRole('alert')).toHaveTextContent(message);
+  });
+
   test('イベント一覧をテーブルで表示する', () => {
     const state: OrganizerEventListServiceState = {
       loading: false,
