@@ -7,6 +7,12 @@ export default defineConfig(({ mode }) => {
 
   const frontendPort = Number.parseInt(env.FRONTEND_PORT ?? '5173', 10);
   const backendPort = env.BACKEND_PORT ?? '3000';
+  const defineEnv: Record<string, string> = {
+    'process.env.VITE_API_BASE_URL':
+      env.VITE_API_BASE_URL !== undefined ? JSON.stringify(env.VITE_API_BASE_URL) : 'undefined',
+    'process.env.VITE_ORGANIZER_ID':
+      env.VITE_ORGANIZER_ID !== undefined ? JSON.stringify(env.VITE_ORGANIZER_ID) : 'undefined'
+  };
 
   return {
     root: __dirname,
@@ -26,5 +32,6 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
+    define: defineEnv,
   };
 });
