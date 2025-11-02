@@ -1,4 +1,9 @@
-import { fetchEventCreationDefaults, postCreateEvent, EventApiError } from '../eventApi';
+import {
+  fetchEventCreationDefaults,
+  postCreateEvent,
+  EventApiError,
+  fetchOrganizerEvents
+} from '../eventApi';
 import type { CreateEventRequest } from '@shared/event/contracts/CreateEventContract';
 
 describe('eventApi handleResponse', () => {
@@ -57,5 +62,35 @@ describe('eventApi handleResponse', () => {
     global.fetch = jest.fn().mockResolvedValue(response);
 
     await expect(postCreateEvent(requestBody)).rejects.toBeInstanceOf(EventApiError);
+  });
+
+  test('イベント一覧APIが契約に反するレスポンスを返した場合は例外を投げる', async () => {
+    const response = new Response(JSON.stringify({ invalid: true }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+    global.fetch = jest.fn().mockResolvedValue(response);
+
+    await expect(fetchOrganizerEvents()).rejects.toBeInstanceOf(EventApiError);
+  });
+
+  test('イベント一覧APIが妥当なリストを返した場合は整形済みデータを受け取る', async () => {
+    const payload = [
+      {
+        eventId: 'EVT-001',
+        eventName: '春の大会',
+        startDate: '2024-04-01',
+        endDate: '2024-04-02',
+        isMultiDayEvent: true,
+        isMultiRaceEvent: false
+      }
+    ];
+    const response = new Response(JSON.stringify(payload), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+    global.fetch = jest.fn().mockResolvedValue(response);
+
+    await expect(fetchOrganizerEvents()).resolves.toEqual(payload);
   });
 });

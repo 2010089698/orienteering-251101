@@ -4,6 +4,8 @@ import userEvent from '@testing-library/user-event';
 import EventCreatePage from '../EventCreatePage';
 import type { CreateEventRequest } from '@shared/event/contracts/CreateEventContract';
 import type { EventCreationDefaultsResponse } from '../../api/eventApi';
+import OrganizerEventListPage from '../../list/OrganizerEventListPage';
+import type { OrganizerEventListServiceFactory } from '../../list/useOrganizerEventListService';
 import {
   useEventCreateService,
   type EventCreateServiceFactory,
@@ -45,11 +47,18 @@ const renderPage = (gatewayOverrides?: Partial<EventCreateServiceGateway>) => {
       gateway
     });
 
+  const listServiceFactory: OrganizerEventListServiceFactory = () => ({
+    events: [],
+    loading: false,
+    error: null,
+    retry: jest.fn()
+  });
+
   const renderResult = render(
     <MemoryRouter initialEntries={['/events/create']}>
       <Routes>
         <Route path="/events/create" element={<EventCreatePage serviceFactory={serviceFactory} />} />
-        <Route path="/events" element={<div data-testid="events-list-page">イベント一覧</div>} />
+        <Route path="/events" element={<OrganizerEventListPage serviceFactory={listServiceFactory} />} />
       </Routes>
     </MemoryRouter>
   );
@@ -136,7 +145,9 @@ describe('EventCreatePage', () => {
       ]
     });
 
-    await waitFor(() => expect(screen.getByTestId('events-list-page')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText('登録されたイベントはありません。')).toBeInTheDocument()
+    );
   });
 
   test('キャンセルを押下すると一覧へ遷移する', async () => {
@@ -146,7 +157,9 @@ describe('EventCreatePage', () => {
     const cancelButton = await screen.findByRole('button', { name: 'キャンセル' });
     await user.click(cancelButton);
 
-    await waitFor(() => expect(screen.getByTestId('events-list-page')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText('登録されたイベントはありません。')).toBeInTheDocument()
+    );
   });
 
   test('初期設定APIがnullishを返した場合はデフォルト値にフォールバックする', async () => {

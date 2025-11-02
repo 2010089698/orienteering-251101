@@ -1,4 +1,8 @@
 import type { CreateEventRequest, RaceScheduleRequest } from '@shared/event/contracts/CreateEventContract';
+import {
+  eventSummaryListResponseSchema,
+  type EventSummaryListResponse
+} from '@shared/event/contracts/EventSummaryContract';
 
 export interface EventCreationDefaultsResponse {
   dateFormat: string;
@@ -124,4 +128,21 @@ export async function postCreateEvent(
   });
 
   return handleResponse<CreateEventResponseDto>(response);
+}
+
+export async function fetchOrganizerEvents(
+  signal?: AbortSignal
+): Promise<EventSummaryListResponse> {
+  const response = await fetch(buildApiUrl('/events'), {
+    method: 'GET',
+    signal
+  });
+
+  const payload = await handleResponse<unknown>(response);
+
+  try {
+    return eventSummaryListResponseSchema.parse(payload);
+  } catch (error) {
+    throw new EventApiError('イベント一覧のレスポンス解析に失敗しました。', response.status, error);
+  }
 }
