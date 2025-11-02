@@ -93,7 +93,7 @@ describe('eventApi handleResponse', () => {
 
   test('主催者IDをクエリパラメーターとして利用する', async () => {
     process.env.VITE_ORGANIZER_ID = 'organizer-123';
-    const payload = [];
+    const payload: unknown[] = [];
     const response = new Response(JSON.stringify(payload), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }

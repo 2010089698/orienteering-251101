@@ -163,8 +163,8 @@ describe('EventCreatePage', () => {
   });
 
   test('初期設定APIがnullishを返した場合はデフォルト値にフォールバックする', async () => {
-    const fetchDefaults = jest
-      .fn<EventCreateServiceGateway['fetchDefaults']>()
+    const fetchDefaults: jest.MockedFunction<EventCreateServiceGateway['fetchDefaults']> = jest
+      .fn<ReturnType<EventCreateServiceGateway['fetchDefaults']>, Parameters<EventCreateServiceGateway['fetchDefaults']>>()
       .mockResolvedValue(null as unknown as EventCreationDefaultsResponse);
 
     renderPage({
