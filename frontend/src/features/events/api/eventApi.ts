@@ -34,7 +34,7 @@ export class EventApiError extends Error {
 }
 
 function resolveApiBaseUrl(): string {
-  const fromProcess = typeof process !== 'undefined' ? process.env?.VITE_API_BASE_URL : undefined;
+  const fromProcess = process.env.VITE_API_BASE_URL as string | undefined;
   const fromGlobal = (globalThis as Record<string, unknown> | undefined)?.VITE_API_BASE_URL as string | undefined;
   const raw = fromProcess ?? fromGlobal ?? '';
 
@@ -42,7 +42,7 @@ function resolveApiBaseUrl(): string {
 }
 
 function resolveOrganizerId(): string | undefined {
-  const fromProcess = typeof process !== 'undefined' ? process.env?.VITE_ORGANIZER_ID : undefined;
+  const fromProcess = process.env.VITE_ORGANIZER_ID as string | undefined;
   const fromGlobal = (globalThis as Record<string, unknown> | undefined)?.VITE_ORGANIZER_ID as string | undefined;
   const raw = fromProcess ?? fromGlobal;
 
