@@ -8,10 +8,17 @@ import type { CreateEventRequest } from '@shared/event/contracts/CreateEventCont
 
 describe('eventApi handleResponse', () => {
   const originalFetch = global.fetch;
+  const ORIGINAL_ENV = { ...process.env };
 
   afterEach(() => {
     global.fetch = originalFetch;
     jest.resetAllMocks();
+    process.env = { ...ORIGINAL_ENV } as NodeJS.ProcessEnv;
+    delete process.env.VITE_ORGANIZER_ID;
+  });
+
+  afterAll(() => {
+    process.env = ORIGINAL_ENV as NodeJS.ProcessEnv;
   });
 
   test('204 No Content 応答は契約違反として扱う', async () => {
@@ -65,6 +72,7 @@ describe('eventApi handleResponse', () => {
   });
 
   test('イベント一覧APIが契約に反するレスポンスを返した場合は例外を投げる', async () => {
+    process.env.VITE_ORGANIZER_ID = 'organizer-default';
     const response = new Response(JSON.stringify({ invalid: true }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
@@ -74,7 +82,35 @@ describe('eventApi handleResponse', () => {
     await expect(fetchOrganizerEvents()).rejects.toBeInstanceOf(EventApiError);
   });
 
+  test('主催者IDが設定されていない場合は例外を投げる', async () => {
+    global.fetch = jest.fn();
+
+    await expect(fetchOrganizerEvents()).rejects.toThrow(
+      '主催者ID設定が必要です。環境変数 VITE_ORGANIZER_ID を設定してください。'
+    );
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  test('主催者IDをクエリパラメーターとして利用する', async () => {
+    process.env.VITE_ORGANIZER_ID = 'organizer-123';
+    const payload = [];
+    const response = new Response(JSON.stringify(payload), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const fetchMock = jest.fn().mockResolvedValue(response);
+    global.fetch = fetchMock;
+
+    await fetchOrganizerEvents();
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/events?organizerId=organizer-123', {
+      method: 'GET',
+      signal: undefined
+    });
+  });
+
   test('イベント一覧APIが妥当なリストを返した場合は整形済みデータを受け取る', async () => {
+    process.env.VITE_ORGANIZER_ID = 'organizer-default';
     const payload = [
       {
         eventId: 'EVT-001',

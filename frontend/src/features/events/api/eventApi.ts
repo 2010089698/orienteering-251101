@@ -33,9 +33,9 @@ export class EventApiError extends Error {
   }
 }
 
-function readViteEnv(): string | undefined {
+function readViteEnvVar(key: string): string | undefined {
   try {
-    return Function('return import.meta.env.VITE_API_BASE_URL ?? undefined;')() as string | undefined;
+    return Function(`return import.meta.env.${key} ?? undefined;`)() as string | undefined;
   } catch {
     return undefined;
   }
@@ -44,10 +44,24 @@ function readViteEnv(): string | undefined {
 function resolveApiBaseUrl(): string {
   const fromProcess = typeof process !== 'undefined' ? process.env?.VITE_API_BASE_URL : undefined;
   const fromGlobal = (globalThis as Record<string, unknown> | undefined)?.VITE_API_BASE_URL as string | undefined;
-  const fromVite = readViteEnv();
+  const fromVite = readViteEnvVar('VITE_API_BASE_URL');
   const raw = fromProcess ?? fromGlobal ?? fromVite ?? '';
 
   return raw.replace(/\/+$/, '');
+}
+
+function resolveOrganizerId(): string | undefined {
+  const fromProcess = typeof process !== 'undefined' ? process.env?.VITE_ORGANIZER_ID : undefined;
+  const fromGlobal = (globalThis as Record<string, unknown> | undefined)?.VITE_ORGANIZER_ID as string | undefined;
+  const fromVite = readViteEnvVar('VITE_ORGANIZER_ID');
+  const raw = fromProcess ?? fromGlobal ?? fromVite;
+
+  if (typeof raw !== 'string') {
+    return undefined;
+  }
+
+  const trimmed = raw.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
 }
 
 const API_BASE_URL = resolveApiBaseUrl();
@@ -133,7 +147,17 @@ export async function postCreateEvent(
 export async function fetchOrganizerEvents(
   signal?: AbortSignal
 ): Promise<EventSummaryListResponse> {
-  const response = await fetch(buildApiUrl('/events'), {
+  const organizerId = resolveOrganizerId();
+
+  if (!organizerId) {
+    throw new EventApiError(
+      '主催者ID設定が必要です。環境変数 VITE_ORGANIZER_ID を設定してください。',
+      400,
+      { reason: 'MISSING_ORGANIZER_ID' }
+    );
+  }
+
+  const response = await fetch(buildApiUrl(`/events?organizerId=${encodeURIComponent(organizerId)}`), {
     method: 'GET',
     signal
   });
