@@ -36,7 +36,8 @@ function assembleEventModule(app: Express, dependencies: ApplicationDependencies
     createEventUseCase,
     defaultsQueryHandler,
     listEventsQueryHandler,
-    eventDetailQueryHandler
+    eventDetailQueryHandler,
+    publishEventUseCase
   );
   const publicEventController = new PublicEventController(listPublicEventsQueryHandler);
 

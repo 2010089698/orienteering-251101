@@ -22,6 +22,9 @@ describe('OrganizerEventDetailPage', () => {
     loading: false,
     error: null,
     retry: jest.fn(),
+    publishing: false,
+    publishError: null,
+    publish: jest.fn(),
     detail: {
       eventId: 'EVT-001',
       eventName: '春の大会',
@@ -29,6 +32,7 @@ describe('OrganizerEventDetailPage', () => {
       endDate: '2024-04-02',
       isMultiDayEvent: true,
       isMultiRaceEvent: false,
+      isPublic: false,
       raceSchedules: [
         { name: 'Day1', date: '2024-04-01' },
         { name: 'Day2', date: '2024-04-02' }
@@ -62,6 +66,8 @@ describe('OrganizerEventDetailPage', () => {
     expect(screen.getByRole('heading', { name: 'イベント詳細' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '春の大会' })).toBeInTheDocument();
     expect(screen.getByText(/開催期間/)).toBeInTheDocument();
+    expect(screen.getByText('公開状態')).toBeInTheDocument();
+    expect(screen.getByText('非公開')).toBeInTheDocument();
 
     const raceList = screen.getByRole('list');
     const raceItems = within(raceList).getAllByRole('listitem');
@@ -73,6 +79,7 @@ describe('OrganizerEventDetailPage', () => {
       ...baseState,
       detail: {
         ...baseState.detail!,
+        isPublic: true,
         entryReceptionStatus: 'OPEN',
         startListStatus: 'PUBLISHED',
         resultPublicationStatus: 'PUBLISHED'
@@ -81,8 +88,19 @@ describe('OrganizerEventDetailPage', () => {
 
     renderWithState(state);
 
+    expect(screen.getByText('このイベントは公開済みです。')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'エントリー受付を管理' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'スタートリストを管理' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '公開済みリザルトを見る' })).toBeInTheDocument();
+  });
+
+  test('未公開イベントの公開ボタンを押下できる', async () => {
+    const publish = jest.fn();
+    renderWithState({ ...baseState, publish });
+
+    const button = screen.getByRole('button', { name: 'イベントを公開' });
+    await userEvent.setup().click(button);
+
+    expect(publish).toHaveBeenCalledTimes(1);
   });
 });

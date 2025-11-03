@@ -22,7 +22,8 @@ const OrganizerEventDetailPage = ({
   serviceFactory = useOrganizerEventDetailService
 }: OrganizerEventDetailPageProps) => {
   const { eventId = '' } = useParams<'eventId'>();
-  const { detail, loading, error, retry } = resolveService(serviceFactory, eventId);
+  const { detail, loading, error, retry, publishing, publishError, publish } =
+    resolveService(serviceFactory, eventId);
   const headingId = 'organizer-event-detail-heading';
 
   return (
@@ -61,6 +62,10 @@ const OrganizerEventDetailPage = ({
               <dd>{detail.isMultiRaceEvent ? 'はい' : 'いいえ'}</dd>
             </div>
             <div>
+              <dt>公開状態</dt>
+              <dd>{detail.isPublic ? '公開済み' : '非公開'}</dd>
+            </div>
+            <div>
               <dt>エントリー受付</dt>
               <dd>{translateEntryReceptionStatus(detail.entryReceptionStatus)}</dd>
             </div>
@@ -95,6 +100,17 @@ const OrganizerEventDetailPage = ({
       {!loading && !error && detail && (
         <section aria-label="操作ボタン">
           <h2>操作</h2>
+          {!detail.isPublic && (
+            <div>
+              <button type="button" onClick={publish} disabled={publishing}>
+                {publishing ? '公開処理中...' : 'イベントを公開'}
+              </button>
+            </div>
+          )}
+          {detail.isPublic && <p>このイベントは公開済みです。</p>}
+          {publishError && (
+            <p role="alert">{publishError}</p>
+          )}
           <div>
             {detail.entryReceptionStatus === 'NOT_REGISTERED' ? (
               <button type="button">エントリー受付を作成</button>

@@ -16,6 +16,7 @@ function mapToResponse(dto: OrganizerEventDetailResponseDto): OrganizerEventDeta
     endDate: formatDateOnly(dto.endDate),
     isMultiDayEvent: dto.isMultiDay,
     isMultiRaceEvent: dto.isMultiRace,
+    isPublic: dto.isPublic,
     raceSchedules: dto.raceSchedules.map((race) => ({
       name: race.name,
       date: formatDateOnly(race.scheduledDate)

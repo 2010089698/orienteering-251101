@@ -53,6 +53,7 @@ export const organizerEventDetailResponseSchema = z.object({
   endDate: isoDateOnlySchema,
   isMultiDayEvent: z.boolean({ required_error: '複数日開催フラグは必須です。' }),
   isMultiRaceEvent: z.boolean({ required_error: '複数レース開催フラグは必須です。' }),
+  isPublic: z.boolean({ required_error: '公開状態は必須です。' }),
   raceSchedules: z.array(raceScheduleDetailSchema),
   entryReceptionStatus: entryReceptionStatusSchema,
   startListStatus: startListStatusSchema,

@@ -20,6 +20,7 @@ describe('GetOrganizerEventDetailQueryHandler', () => {
       endDate: new Date('2024-04-02T10:00:00.000Z'),
       isMultiDay: true,
       isMultiRace: false,
+      isPublic: false,
       raceSchedules: [
         { name: 'Day1', scheduledDate: new Date('2024-04-01T10:00:00.000Z') },
         { name: 'Day2', scheduledDate: new Date('2024-04-02T10:00:00.000Z') }
@@ -42,6 +43,7 @@ describe('GetOrganizerEventDetailQueryHandler', () => {
       endDate: '2024-04-02',
       isMultiDayEvent: true,
       isMultiRaceEvent: false,
+      isPublic: false,
       raceSchedules: [
         { name: 'Day1', date: '2024-04-01' },
         { name: 'Day2', date: '2024-04-02' }

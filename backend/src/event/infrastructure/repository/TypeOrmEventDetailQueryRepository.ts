@@ -39,6 +39,7 @@ export class TypeOrmEventDetailQueryRepository implements EventDetailQueryReposi
       endDate: event.endDate,
       isMultiDay: event.isMultiDay,
       isMultiRace: event.isMultiRace,
+      isPublic: event.isPublic,
       raceSchedules,
       entryReceptionStatus: 'NOT_REGISTERED',
       startListStatus: 'NOT_CREATED',
