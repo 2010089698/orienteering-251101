@@ -3,9 +3,14 @@ import EventPeriod from '../../domain/EventPeriod';
 import RaceSchedule from '../../domain/RaceSchedule';
 import { CreateEventCommand, RaceScheduleCommandDto } from './CreateEventCommand';
 import EventRepository from '../port/out/EventRepository';
+import PublishEventUseCase from './PublishEventUseCase';
+import PublishEventCommand from './PublishEventCommand';
 
 export class CreateEventUseCase {
-  constructor(private readonly eventRepository: EventRepository) {}
+  constructor(
+    private readonly eventRepository: EventRepository,
+    private readonly publishEventUseCase?: PublishEventUseCase
+  ) {}
 
   public async execute(command: CreateEventCommand): Promise<Event> {
     const basePeriod = this.createBasePeriod(command);
@@ -22,6 +27,15 @@ export class CreateEventUseCase {
 
     const event = Event.create(eventProps);
     await this.eventRepository.save(event);
+
+    if (command.publishImmediately) {
+      if (!this.publishEventUseCase) {
+        throw new Error('即時公開を行うには公開ユースケースが必要です。');
+      }
+
+      const publishCommand = PublishEventCommand.forEvent(event.eventIdentifier);
+      return this.publishEventUseCase.execute(publishCommand);
+    }
 
     return event;
   }

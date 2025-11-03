@@ -27,7 +27,8 @@ export const createEventRequestBaseSchema = z.object({
   eventName: createRequiredStringSchema('イベント名は必須です。'),
   startDate: createIsoDateSchema('イベント開始日は必須です。', 'イベント開始日はISO8601形式で指定してください。'),
   endDate: createIsoDateSchema('イベント終了日は必須です。', 'イベント終了日はISO8601形式で指定してください。').optional(),
-  raceSchedules: z.array(raceScheduleRequestSchema).min(1, 'レース日程を1件以上指定してください。')
+  raceSchedules: z.array(raceScheduleRequestSchema).min(1, 'レース日程を1件以上指定してください。'),
+  publishImmediately: z.boolean({ invalid_type_error: '公開フラグは真偽値で指定してください。' }).optional()
 });
 
 export const createEventRequestSchema = createEventRequestBaseSchema.superRefine((data, ctx) => {

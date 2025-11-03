@@ -3,6 +3,12 @@ import { DataSource } from 'typeorm';
 import PublicEventSearchCondition from '../../../src/event/application/query/participant/PublicEventSearchCondition';
 import TypeOrmPublicEventListQueryRepository from '../../../src/event/infrastructure/repository/TypeOrmPublicEventListQueryRepository';
 import { EventEntity } from '../../../src/event/infrastructure/repository/EventEntity';
+import { RaceScheduleEntity } from '../../../src/event/infrastructure/repository/RaceScheduleEntity';
+import TypeOrmEventRepository from '../../../src/event/infrastructure/repository/TypeOrmEventRepository';
+import CreateEventUseCase from '../../../src/event/application/command/CreateEventUseCase';
+import PublishEventUseCase from '../../../src/event/application/command/PublishEventUseCase';
+import { CreateEventCommand } from '../../../src/event/application/command/CreateEventCommand';
+import PublishEventCommand from '../../../src/event/application/command/PublishEventCommand';
 import { createSqliteTestDataSource } from '../../support/createSqliteTestDataSource';
 
 function createEventEntity(params: {
@@ -27,16 +33,23 @@ function createEventEntity(params: {
 describe('TypeOrmPublicEventListQueryRepository', () => {
   let dataSource: DataSource;
   let repository: TypeOrmPublicEventListQueryRepository;
+  let eventRepository: TypeOrmEventRepository;
+  let publishEventUseCase: PublishEventUseCase;
+  let createEventUseCase: CreateEventUseCase;
   let cleanup: () => Promise<void>;
 
   beforeAll(async () => {
     const fixture = await createSqliteTestDataSource();
     dataSource = fixture.dataSource;
     repository = new TypeOrmPublicEventListQueryRepository(dataSource);
+    eventRepository = new TypeOrmEventRepository(dataSource);
+    publishEventUseCase = new PublishEventUseCase(eventRepository);
+    createEventUseCase = new CreateEventUseCase(eventRepository, publishEventUseCase);
     cleanup = fixture.cleanup;
   });
 
   beforeEach(async () => {
+    await dataSource.getRepository(RaceScheduleEntity).clear();
     await dataSource.getRepository(EventEntity).clear();
   });
 
@@ -159,5 +172,35 @@ describe('TypeOrmPublicEventListQueryRepository', () => {
 
     expect(past).toHaveLength(1);
     expect(past[0]).toMatchObject({ id: 'past' });
+  });
+
+  it('公開操作後に公開イベント一覧へ反映される', async () => {
+    const command = CreateEventCommand.from({
+      eventId: 'publish-target',
+      eventName: '公開予定イベント',
+      startDate: '2024-07-10',
+      endDate: '2024-07-11',
+      raceSchedules: [
+        { name: '初日', date: '2024-07-10' },
+        { name: '二日目', date: '2024-07-11' }
+      ]
+    });
+
+    await createEventUseCase.execute(command);
+
+    const beforePublish = await repository.findPublicSummaries(
+      PublicEventSearchCondition.create()
+    );
+
+    expect(beforePublish).toHaveLength(0);
+
+    await publishEventUseCase.execute(PublishEventCommand.forEvent('publish-target'));
+
+    const afterPublish = await repository.findPublicSummaries(
+      PublicEventSearchCondition.create()
+    );
+
+    expect(afterPublish).toHaveLength(1);
+    expect(afterPublish[0]).toMatchObject({ id: 'publish-target' });
   });
 });

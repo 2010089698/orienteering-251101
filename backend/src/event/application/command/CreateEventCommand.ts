@@ -9,6 +9,7 @@ export interface CreateEventCommandProps {
   readonly startDate: string;
   readonly endDate?: string;
   readonly raceSchedules: ReadonlyArray<RaceScheduleCommandDto>;
+  readonly publishImmediately?: boolean;
 }
 
 /**
@@ -44,6 +45,10 @@ export class CreateEventCommand {
 
   public get raceSchedules(): ReadonlyArray<RaceScheduleCommandDto> {
     return [...this.props.raceSchedules];
+  }
+
+  public get publishImmediately(): boolean {
+    return this.props.publishImmediately ?? false;
   }
 }
 

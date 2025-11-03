@@ -2,7 +2,7 @@ import { DataSource, EntityManager } from 'typeorm';
 
 import EventRepository from '../../application/port/out/EventRepository';
 import Event from '../../domain/Event';
-import { mapEventToEntity, EventEntity } from './EventEntity';
+import { mapEventToEntity, mapEntityToEvent, EventEntity } from './EventEntity';
 import { mapRaceScheduleToEntity, RaceScheduleEntity } from './RaceScheduleEntity';
 
 class EventPersistenceError extends Error {
@@ -27,6 +27,26 @@ function wrapPersistenceError(message: string, error: unknown): never {
  */
 export class TypeOrmEventRepository implements EventRepository {
   public constructor(private readonly dataSource: DataSource) {}
+
+  public async findById(eventId: string): Promise<Event | null> {
+    try {
+      const repository = this.dataSource.getRepository(EventEntity);
+      const event = await repository
+        .createQueryBuilder('event')
+        .leftJoinAndSelect('event.raceSchedules', 'raceSchedule')
+        .where('event.id = :eventId', { eventId })
+        .getOne();
+
+      if (!event) {
+        return null;
+      }
+
+      const raceSchedules = event.raceSchedules ?? [];
+      return mapEntityToEvent(event, raceSchedules);
+    } catch (error: unknown) {
+      wrapPersistenceError('イベント情報の取得に失敗しました。', error);
+    }
+  }
 
   public async save(event: Event): Promise<void> {
     await this.dataSource.transaction(async (manager: EntityManager) => {

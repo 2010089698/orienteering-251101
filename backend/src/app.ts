@@ -4,6 +4,7 @@ import { DataSource } from 'typeorm';
 
 import { EventController, PublicEventController } from './event/adapter/in/web';
 import CreateEventUseCase from './event/application/command/CreateEventUseCase';
+import PublishEventUseCase from './event/application/command/PublishEventUseCase';
 import GetEventCreationDefaultsQueryHandler from './event/application/query/GetEventCreationDefaultsQueryHandler';
 import GetOrganizerEventDetailQueryHandler from './event/application/query/GetOrganizerEventDetailQueryHandler';
 import ListOrganizerEventsQueryHandler from './event/application/query/ListOrganizerEventsQueryHandler';
@@ -20,12 +21,13 @@ export interface ApplicationDependencies {
 
 function assembleEventModule(app: Express, dependencies: ApplicationDependencies): void {
   const eventRepository = new TypeOrmEventRepository(dependencies.eventDataSource);
+  const publishEventUseCase = new PublishEventUseCase(eventRepository);
   const eventListQueryRepository = new TypeOrmEventListQueryRepository(dependencies.eventDataSource);
   const publicEventListQueryRepository = new TypeOrmPublicEventListQueryRepository(
     dependencies.eventDataSource
   );
   const eventDetailQueryRepository = new TypeOrmEventDetailQueryRepository(dependencies.eventDataSource);
-  const createEventUseCase = new CreateEventUseCase(eventRepository);
+  const createEventUseCase = new CreateEventUseCase(eventRepository, publishEventUseCase);
   const defaultsQueryHandler = new GetEventCreationDefaultsQueryHandler();
   const listEventsQueryHandler = new ListOrganizerEventsQueryHandler(eventListQueryRepository);
   const listPublicEventsQueryHandler = new ListPublicEventsQueryHandler(publicEventListQueryRepository);
