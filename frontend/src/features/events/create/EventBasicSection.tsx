@@ -26,6 +26,18 @@ const EventBasicSection = ({ register, errors, disabled }: EventBasicSectionProp
         <input id="event-start-date" type="date" {...register('startDate')} disabled={disabled} />
         {errors.startDate && <p role="alert">{errors.startDate.message}</p>}
       </div>
+      <div>
+        <label htmlFor="publish-immediately">
+          <input
+            id="publish-immediately"
+            type="checkbox"
+            {...register('publishImmediately')}
+            disabled={disabled}
+          />
+          即時公開
+        </label>
+        {errors.publishImmediately && <p role="alert">{errors.publishImmediately.message}</p>}
+      </div>
     </section>
   );
 };

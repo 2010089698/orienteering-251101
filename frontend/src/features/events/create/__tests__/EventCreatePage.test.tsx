@@ -74,6 +74,9 @@ describe('EventCreatePage', () => {
     const eventIdInput = await screen.findByLabelText('イベントID');
     expect(eventIdInput).toBeInTheDocument();
 
+    const publishToggle = screen.getByLabelText('即時公開');
+    expect(publishToggle).not.toBeChecked();
+
     const multiDayToggle = screen.getByLabelText('複数日イベント');
     expect(multiDayToggle).not.toBeChecked();
 
@@ -105,6 +108,9 @@ describe('EventCreatePage', () => {
     await user.type(await screen.findByLabelText('イベントID'), 'E-001');
     await user.type(screen.getByLabelText('イベント名'), '春のオリエンテーリング');
     fireEvent.change(screen.getByLabelText('イベント開始日'), { target: { value: '2024-04-01' } });
+
+    const publishToggle = screen.getByLabelText('即時公開');
+    await user.click(publishToggle);
 
     const multiDayToggle = screen.getByLabelText('複数日イベント');
     await user.click(multiDayToggle);
@@ -139,6 +145,7 @@ describe('EventCreatePage', () => {
       eventName: '春のオリエンテーリング',
       startDate: '2024-04-01',
       endDate: '2024-04-02',
+      publishImmediately: true,
       raceSchedules: [
         { name: 'Day1 Sprint', date: '2024-04-01' },
         { name: 'Day2 Middle', date: '2024-04-02' }

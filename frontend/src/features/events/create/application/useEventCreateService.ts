@@ -8,18 +8,8 @@ import {
   fetchEventCreationDefaults,
   postCreateEvent
 } from '../../api/eventApi';
-import { EventCreateFormValues, eventCreateSchema } from '../types';
+import { DEFAULT_FORM_VALUES, EventCreateFormValues, eventCreateSchema } from '../types';
 import type { CreateEventRequest } from '@shared/event/contracts/CreateEventContract';
-
-const DEFAULT_FORM_VALUES: EventCreateFormValues = {
-  eventId: '',
-  eventName: '',
-  startDate: '',
-  endDate: '',
-  isMultiDay: false,
-  isMultiRace: false,
-  raceSchedules: [{ name: '', date: '' }]
-};
 
 const DEFAULT_EVENT_LIMITS: EventCreationDefaultsResponse = {
   dateFormat: 'YYYY-MM-DD',
@@ -71,6 +61,7 @@ function mapToRequest(values: EventCreateFormValues): CreateEventRequest {
     eventName: values.eventName,
     startDate: values.startDate,
     endDate: values.endDate?.trim() || undefined,
+    publishImmediately: Boolean(values.publishImmediately),
     raceSchedules: values.raceSchedules.map((race) => ({
       name: race.name,
       date: race.date

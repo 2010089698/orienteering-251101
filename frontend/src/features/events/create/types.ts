@@ -10,7 +10,8 @@ export const raceFormSchema = raceScheduleRequestSchema;
 export const eventCreateSchema = createEventRequestBaseSchema
   .extend({
     isMultiDay: z.boolean(),
-    isMultiRace: z.boolean()
+    isMultiRace: z.boolean(),
+    publishImmediately: z.boolean().default(false)
   })
   .superRefine((data, ctx) => {
     const baseIssues = collectCreateEventDateIssues(data);
@@ -73,3 +74,14 @@ export const eventCreateSchema = createEventRequestBaseSchema
 
 export type RaceFormValue = z.infer<typeof raceFormSchema>;
 export type EventCreateFormValues = z.infer<typeof eventCreateSchema>;
+
+export const DEFAULT_FORM_VALUES: EventCreateFormValues = {
+  eventId: '',
+  eventName: '',
+  startDate: '',
+  endDate: '',
+  isMultiDay: false,
+  isMultiRace: false,
+  publishImmediately: false,
+  raceSchedules: [{ name: '', date: '' }]
+};
