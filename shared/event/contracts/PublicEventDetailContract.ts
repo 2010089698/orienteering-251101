@@ -7,32 +7,17 @@ import {
   startListStatusSchema
 } from './EventCommonSchemas';
 
-export const organizerEventDetailResponseSchema = z.object({
+export const publicEventDetailResponseSchema = z.object({
   eventId: z.string({ required_error: 'イベントIDは必須です。' }).min(1, 'イベントIDは必須です。'),
   eventName: z.string({ required_error: 'イベント名は必須です。' }).min(1, 'イベント名は必須です。'),
   startDate: isoDateOnlySchema,
   endDate: isoDateOnlySchema,
   isMultiDayEvent: z.boolean({ required_error: '複数日開催フラグは必須です。' }),
   isMultiRaceEvent: z.boolean({ required_error: '複数レース開催フラグは必須です。' }),
-  isPublic: z.boolean({ required_error: '公開状態は必須です。' }),
   raceSchedules: z.array(raceScheduleDetailSchema),
   entryReceptionStatus: entryReceptionStatusSchema,
   startListStatus: startListStatusSchema,
   resultPublicationStatus: resultPublicationStatusSchema
 });
 
-export type OrganizerEventDetailResponse = z.infer<typeof organizerEventDetailResponseSchema>;
-
-export {
-  entryReceptionStatusSchema,
-  raceScheduleDetailSchema,
-  resultPublicationStatusSchema,
-  startListStatusSchema
-} from './EventCommonSchemas';
-
-export type {
-  EntryReceptionStatus,
-  RaceScheduleDetail,
-  ResultPublicationStatus,
-  StartListStatus
-} from './EventCommonSchemas';
+export type PublicEventDetailResponse = z.infer<typeof publicEventDetailResponseSchema>;
