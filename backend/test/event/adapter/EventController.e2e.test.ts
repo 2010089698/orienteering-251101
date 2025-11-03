@@ -9,6 +9,9 @@ import GetEventCreationDefaultsQueryHandler from '../../../src/event/application
 import EventListQueryRepository from '../../../src/event/application/port/out/EventListQueryRepository';
 import ListOrganizerEventsQueryHandler from '../../../src/event/application/query/ListOrganizerEventsQueryHandler';
 import EventSummaryResponseDto from '../../../src/event/application/query/EventSummaryResponseDto';
+import EventDetailQueryRepository from '../../../src/event/application/port/out/EventDetailQueryRepository';
+import GetOrganizerEventDetailQueryHandler from '../../../src/event/application/query/GetOrganizerEventDetailQueryHandler';
+import type OrganizerEventDetailResponseDto from '../../../src/event/application/query/OrganizerEventDetailResponseDto';
 import Event from '../../../src/event/domain/Event';
 
 class InMemoryEventRepository implements EventRepository {
@@ -32,16 +35,29 @@ class InMemoryEventListQueryRepository implements EventListQueryRepository {
   }
 }
 
+class InMemoryEventDetailQueryRepository implements EventDetailQueryRepository {
+  public details = new Map<string, OrganizerEventDetailResponseDto>();
+
+  public async findDetailByEventId(
+    eventId: string
+  ): Promise<OrganizerEventDetailResponseDto | null> {
+    return this.details.get(eventId) ?? null;
+  }
+}
+
 describe('EventController (E2E)', () => {
   const repository = new InMemoryEventRepository();
   const createEventUseCase = new CreateEventUseCase(repository);
   const defaultsQueryHandler = new GetEventCreationDefaultsQueryHandler();
   const eventListQueryRepository = new InMemoryEventListQueryRepository();
   const listEventsQueryHandler = new ListOrganizerEventsQueryHandler(eventListQueryRepository);
+  const eventDetailQueryRepository = new InMemoryEventDetailQueryRepository();
+  const eventDetailQueryHandler = new GetOrganizerEventDetailQueryHandler(eventDetailQueryRepository);
   const controller = new EventController(
     createEventUseCase,
     defaultsQueryHandler,
-    listEventsQueryHandler
+    listEventsQueryHandler,
+    eventDetailQueryHandler
   );
 
   const app = express();
@@ -52,6 +68,7 @@ describe('EventController (E2E)', () => {
     repository.events.length = 0;
     eventListQueryRepository.events = [];
     eventListQueryRepository.requestedOrganizerIds = [];
+    eventDetailQueryRepository.details.clear();
   });
 
   it('POST /events 正常系: イベントが作成されレスポンスが返る', async () => {

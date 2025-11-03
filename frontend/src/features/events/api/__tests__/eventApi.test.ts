@@ -2,7 +2,8 @@ import {
   fetchEventCreationDefaults,
   postCreateEvent,
   EventApiError,
-  fetchOrganizerEvents
+  fetchOrganizerEvents,
+  fetchOrganizerEventDetail
 } from '../eventApi';
 import type { CreateEventRequest } from '@shared/event/contracts/CreateEventContract';
 
@@ -128,5 +129,43 @@ describe('eventApi handleResponse', () => {
     global.fetch = jest.fn().mockResolvedValue(response);
 
     await expect(fetchOrganizerEvents()).resolves.toEqual(payload);
+  });
+
+  test('イベント詳細APIでイベントID未指定時は呼び出さない', async () => {
+    await expect(fetchOrganizerEventDetail('')).rejects.toThrow('イベントIDを指定してください。');
+  });
+
+  test('イベント詳細APIが契約に反するレスポンスを返した場合は例外を投げる', async () => {
+    const response = new Response(JSON.stringify({ invalid: true }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+    global.fetch = jest.fn().mockResolvedValue(response);
+
+    await expect(fetchOrganizerEventDetail('event-001')).rejects.toBeInstanceOf(EventApiError);
+  });
+
+  test('イベント詳細APIが妥当なレスポンスを返した場合は解析結果を返す', async () => {
+    const payload = {
+      eventId: 'EVT-001',
+      eventName: '春の大会',
+      startDate: '2024-04-01',
+      endDate: '2024-04-02',
+      isMultiDayEvent: true,
+      isMultiRaceEvent: false,
+      raceSchedules: [
+        { name: 'Day1', date: '2024-04-01' }
+      ],
+      entryReceptionStatus: 'NOT_REGISTERED',
+      startListStatus: 'NOT_CREATED',
+      resultPublicationStatus: 'NOT_PUBLISHED'
+    } as const;
+    const response = new Response(JSON.stringify(payload), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+    global.fetch = jest.fn().mockResolvedValue(response);
+
+    await expect(fetchOrganizerEventDetail('EVT-001')).resolves.toEqual(payload);
   });
 });
