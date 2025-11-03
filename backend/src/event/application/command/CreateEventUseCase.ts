@@ -26,16 +26,19 @@ export class CreateEventUseCase {
     };
 
     const event = Event.create(eventProps);
-    await this.eventRepository.save(event);
 
     if (command.publishImmediately) {
       if (!this.publishEventUseCase) {
         throw new Error('即時公開を行うには公開ユースケースが必要です。');
       }
 
+      await this.eventRepository.save(event);
+
       const publishCommand = PublishEventCommand.forEvent(event.eventIdentifier);
       return this.publishEventUseCase.execute(publishCommand);
     }
+
+    await this.eventRepository.save(event);
 
     return event;
   }
