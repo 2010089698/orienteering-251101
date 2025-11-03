@@ -3,6 +3,10 @@ import {
   eventSummaryListResponseSchema,
   type EventSummaryListResponse
 } from '@shared/event/contracts/EventSummaryContract';
+import {
+  organizerEventDetailResponseSchema,
+  type OrganizerEventDetailResponse
+} from '@shared/event/contracts/OrganizerEventDetailContract';
 
 export interface EventCreationDefaultsResponse {
   dateFormat: string;
@@ -34,15 +38,29 @@ export class EventApiError extends Error {
 }
 
 function readViteEnvVar(key: string): string | undefined {
-  // @ts-expect-error -- import.meta is provided by Vite at runtime but not recognized under the CommonJS module target.
-  if (typeof import.meta !== 'undefined' && typeof import.meta.env === 'object') {
-    // @ts-expect-error -- See above comment regarding CommonJS compilation.
-    const env = import.meta.env as ImportMetaEnv & Record<string, unknown>;
-    const value = env[key as keyof ImportMetaEnv] ?? env[key];
+  const env = readImportMetaEnv();
+
+  if (env) {
+    const value = env[key as keyof typeof env] ?? env[key];
 
     if (typeof value === 'string') {
       return value;
     }
+  }
+
+  return undefined;
+}
+
+function readImportMetaEnv(): Record<string, unknown> | undefined {
+  try {
+    // eslint-disable-next-line no-eval -- import.meta は eval を介して参照し、テスト環境では存在しないため例外を握りつぶす。
+    const meta = eval('import.meta') as { env?: Record<string, unknown> } | undefined;
+
+    if (meta && typeof meta === 'object' && typeof meta.env === 'object') {
+      return meta.env;
+    }
+  } catch {
+    return undefined;
   }
 
   return undefined;
@@ -175,5 +193,29 @@ export async function fetchOrganizerEvents(
     return eventSummaryListResponseSchema.parse(payload);
   } catch (error) {
     throw new EventApiError('イベント一覧のレスポンス解析に失敗しました。', response.status, error);
+  }
+}
+
+export async function fetchOrganizerEventDetail(
+  eventId: string,
+  signal?: AbortSignal
+): Promise<OrganizerEventDetailResponse> {
+  if (!eventId || eventId.trim().length === 0) {
+    throw new EventApiError('イベントIDを指定してください。', 400, {
+      reason: 'MISSING_EVENT_ID'
+    });
+  }
+
+  const response = await fetch(buildApiUrl(`/events/${encodeURIComponent(eventId)}`), {
+    method: 'GET',
+    signal
+  });
+
+  const payload = await handleResponse<unknown>(response);
+
+  try {
+    return organizerEventDetailResponseSchema.parse(payload);
+  } catch (error) {
+    throw new EventApiError('イベント詳細のレスポンス解析に失敗しました。', response.status, error);
   }
 }

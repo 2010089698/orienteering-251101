@@ -22,6 +22,8 @@ import CreateEventUseCase from '../../../application/command/CreateEventUseCase'
 import { CreateEventCommand, RaceScheduleCommandDto } from '../../../application/command/CreateEventCommand';
 import GetEventCreationDefaultsQuery from '../../../application/query/GetEventCreationDefaultsQuery';
 import GetEventCreationDefaultsQueryHandler from '../../../application/query/GetEventCreationDefaultsQueryHandler';
+import GetOrganizerEventDetailQuery from '../../../application/query/GetOrganizerEventDetailQuery';
+import GetOrganizerEventDetailQueryHandler from '../../../application/query/GetOrganizerEventDetailQueryHandler';
 import ListOrganizerEventsQuery from '../../../application/query/ListOrganizerEventsQuery';
 import ListOrganizerEventsQueryHandler from '../../../application/query/ListOrganizerEventsQueryHandler';
 import EventSummaryResponseDto from '../../../application/query/EventSummaryResponseDto';
@@ -114,13 +116,37 @@ export class EventController {
   constructor(
     private readonly createEventUseCase: CreateEventUseCase,
     private readonly defaultsQueryHandler: GetEventCreationDefaultsQueryHandler,
-    private readonly listEventsQueryHandler: ListOrganizerEventsQueryHandler
+    private readonly listEventsQueryHandler: ListOrganizerEventsQueryHandler,
+    private readonly eventDetailQueryHandler: GetOrganizerEventDetailQueryHandler
   ) {
     this.router = Router();
-    this.router.get('/events', this.handleListEvents.bind(this));
-    this.router.post('/events', this.handleCreateEvent.bind(this));
     this.router.get('/events/defaults', this.handleGetDefaults.bind(this));
     this.router.get('/events/create/defaults', this.handleLegacyDefaults.bind(this));
+    this.router.get('/events', this.handleListEvents.bind(this));
+    this.router.get('/events/:eventId', this.handleGetEventDetail.bind(this));
+    this.router.post('/events', this.handleCreateEvent.bind(this));
+  }
+
+  private async handleGetEventDetail(request: Request, response: Response): Promise<void> {
+    try {
+      const { eventId } = request.params;
+      const query = GetOrganizerEventDetailQuery.forEvent(eventId);
+      const detail = await this.eventDetailQueryHandler.execute(query);
+
+      response.status(200).json(detail);
+    } catch (error) {
+      if (error instanceof Error) {
+        const status = error.message === 'イベントIDを指定してください。' ? 400 : 404;
+        response.status(status).json({
+          message: error.message
+        });
+        return;
+      }
+
+      response.status(500).json({
+        message: '不明なエラーが発生しました。'
+      });
+    }
   }
 
   private async handleListEvents(request: Request, response: Response): Promise<void> {

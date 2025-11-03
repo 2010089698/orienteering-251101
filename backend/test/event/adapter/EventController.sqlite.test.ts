@@ -210,4 +210,56 @@ describe('EventController (SQLite 統合)', () => {
       }
     ]);
   });
+
+  it('GET /events/:eventId イベント詳細を取得する', async () => {
+    const eventRepository = dataSource.getRepository(EventEntity);
+    const raceRepository = dataSource.getRepository(RaceScheduleEntity);
+
+    await eventRepository.save(
+      eventRepository.create({
+        id: 'event-detail-001',
+        name: '詳細テスト大会',
+        organizerId: DEFAULT_ORGANIZER_ID,
+        startDate: new Date('2024-10-01T00:00:00.000Z'),
+        endDate: new Date('2024-10-02T00:00:00.000Z'),
+        isMultiDay: true,
+        isMultiRace: true
+      })
+    );
+
+    await raceRepository.save(
+      raceRepository.create({
+        eventId: 'event-detail-001',
+        name: 'Day1',
+        scheduledDate: new Date('2024-10-01T00:00:00.000Z')
+      })
+    );
+
+    const response = await request(app).get('/events/event-detail-001');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      eventId: 'event-detail-001',
+      eventName: '詳細テスト大会',
+      startDate: '2024-10-01',
+      endDate: '2024-10-02',
+      isMultiDayEvent: true,
+      isMultiRaceEvent: true,
+      raceSchedules: [
+        { name: 'Day1', date: '2024-10-01' }
+      ],
+      entryReceptionStatus: 'NOT_REGISTERED',
+      startListStatus: 'NOT_CREATED',
+      resultPublicationStatus: 'NOT_PUBLISHED'
+    });
+  });
+
+  it('GET /events/:eventId 存在しないイベントの場合は404を返す', async () => {
+    const response = await request(app).get('/events/unknown-event');
+
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({
+      message: '指定されたイベントが見つかりませんでした。'
+    });
+  });
 });
