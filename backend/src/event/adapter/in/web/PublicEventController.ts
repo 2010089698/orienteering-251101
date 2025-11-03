@@ -114,7 +114,7 @@ export class PublicEventController {
 
   private toSearchCondition(dto: ListPublicEventsRequestDto): PublicEventSearchCondition {
     const from = dto.from ? new Date(dto.from) : undefined;
-    const to = dto.to ? new Date(dto.to) : undefined;
+    const to = this.toInclusiveEndDate(dto.to);
     const statuses = (dto.status ?? []) as PublicEventStatus[];
 
     return PublicEventSearchCondition.create({
@@ -123,6 +123,23 @@ export class PublicEventController {
       statuses,
       referenceDate: new Date()
     });
+  }
+
+  private toInclusiveEndDate(value: string | undefined): Date | undefined {
+    if (!value) {
+      return undefined;
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return parsed;
+    }
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      parsed.setUTCHours(23, 59, 59, 999);
+    }
+
+    return parsed;
   }
 }
 
