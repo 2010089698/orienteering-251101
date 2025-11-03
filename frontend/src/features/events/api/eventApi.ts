@@ -23,7 +23,14 @@ export interface CreateEventResponseDto {
   endDate: string;
   isMultiDayEvent: boolean;
   isMultiRaceEvent: boolean;
+  isPublic: boolean;
   raceSchedules: RaceScheduleRequest[];
+}
+
+export interface PublishEventResponseDto {
+  eventId: string;
+  eventName: string;
+  isPublic: boolean;
 }
 
 export class EventApiError extends Error {
@@ -247,4 +254,23 @@ export async function fetchOrganizerEventDetail(
   } catch (error) {
     throw new EventApiError('イベント詳細のレスポンス解析に失敗しました。', response.status, error);
   }
+}
+
+export async function postPublishEvent(
+  eventId: string,
+  signal?: AbortSignal
+): Promise<PublishEventResponseDto> {
+  if (!eventId || eventId.trim().length === 0) {
+    throw new EventApiError('イベントIDを指定してください。', 400, {
+      reason: 'MISSING_EVENT_ID'
+    });
+  }
+
+  const response = await fetch(buildApiUrl(`/events/${encodeURIComponent(eventId)}/publish`), {
+    method: 'POST',
+    headers: JSON_HEADERS,
+    signal
+  });
+
+  return handleResponse<PublishEventResponseDto>(response);
 }

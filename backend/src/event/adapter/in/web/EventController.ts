@@ -20,6 +20,8 @@ import type {
 import { collectCreateEventDateIssues } from '@shared/event/contracts/CreateEventContract';
 import CreateEventUseCase from '../../../application/command/CreateEventUseCase';
 import { CreateEventCommand, RaceScheduleCommandDto } from '../../../application/command/CreateEventCommand';
+import PublishEventUseCase from '../../../application/command/PublishEventUseCase';
+import PublishEventCommand from '../../../application/command/PublishEventCommand';
 import GetEventCreationDefaultsQuery from '../../../application/query/GetEventCreationDefaultsQuery';
 import GetEventCreationDefaultsQueryHandler from '../../../application/query/GetEventCreationDefaultsQueryHandler';
 import GetOrganizerEventDetailQuery from '../../../application/query/GetOrganizerEventDetailQuery';
@@ -98,7 +100,8 @@ export class EventController {
     private readonly createEventUseCase: CreateEventUseCase,
     private readonly defaultsQueryHandler: GetEventCreationDefaultsQueryHandler,
     private readonly listEventsQueryHandler: ListOrganizerEventsQueryHandler,
-    private readonly eventDetailQueryHandler: GetOrganizerEventDetailQueryHandler
+    private readonly eventDetailQueryHandler: GetOrganizerEventDetailQueryHandler,
+    private readonly publishEventUseCase: PublishEventUseCase
   ) {
     this.router = Router();
     this.router.get('/events/defaults', this.handleGetDefaults.bind(this));
@@ -106,6 +109,7 @@ export class EventController {
     this.router.get('/events', this.handleListEvents.bind(this));
     this.router.get('/events/:eventId', this.handleGetEventDetail.bind(this));
     this.router.post('/events', this.handleCreateEvent.bind(this));
+    this.router.post('/events/:eventId/publish', this.handlePublishEvent.bind(this));
   }
 
   private async handleGetEventDetail(request: Request, response: Response): Promise<void> {
@@ -191,6 +195,56 @@ export class EventController {
 
       if (error instanceof Error) {
         response.status(400).json({
+          message: error.message
+        });
+        return;
+      }
+
+      response.status(500).json({
+        message: '不明なエラーが発生しました。'
+      });
+    }
+  }
+
+  private async handlePublishEvent(request: Request, response: Response): Promise<void> {
+    class PublishEventParamsDto {
+      @IsString({ message: 'イベントIDは文字列で指定してください。' })
+      @IsNotEmpty({ message: 'イベントIDは必須です。' })
+      public eventId!: string;
+    }
+
+    try {
+      const params = plainToInstance(PublishEventParamsDto, request.params);
+      const validationErrors = await validate(params, {
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        validationError: { target: false }
+      });
+
+      if (validationErrors.length > 0) {
+        throw new HttpValidationError(mapValidationErrors(validationErrors));
+      }
+
+      const command = PublishEventCommand.forEvent(params.eventId);
+      const event = await this.publishEventUseCase.execute(command);
+
+      response.status(200).json({
+        eventId: event.eventIdentifier,
+        eventName: event.displayName,
+        isPublic: event.isPublic
+      });
+    } catch (error) {
+      if (error instanceof HttpValidationError) {
+        response.status(400).json({
+          message: error.message,
+          errors: error.details
+        });
+        return;
+      }
+
+      if (error instanceof Error) {
+        const status = error.message === '指定されたイベントが見つかりません。' ? 404 : 400;
+        response.status(status).json({
           message: error.message
         });
         return;

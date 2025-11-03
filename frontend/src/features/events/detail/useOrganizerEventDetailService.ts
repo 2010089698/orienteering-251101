@@ -1,9 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { EventApiError, fetchOrganizerEventDetail } from '../api/eventApi';
+import {
+  EventApiError,
+  fetchOrganizerEventDetail,
+  postPublishEvent
+} from '../api/eventApi';
 import type { OrganizerEventDetailResponse } from '@shared/event/contracts/OrganizerEventDetailContract';
 
 export interface OrganizerEventDetailGateway {
   fetchEventDetail: (eventId: string, signal?: AbortSignal) => Promise<OrganizerEventDetailResponse>;
+  publishEvent: (eventId: string, signal?: AbortSignal) => Promise<unknown>;
 }
 
 export interface UseOrganizerEventDetailServiceOptions {
@@ -16,6 +21,9 @@ export interface OrganizerEventDetailServiceState {
   loading: boolean;
   error: string | null;
   retry: () => void;
+  publishing: boolean;
+  publishError: string | null;
+  publish: () => void;
 }
 
 export type OrganizerEventDetailServiceFactory = (
@@ -29,15 +37,18 @@ export const useOrganizerEventDetailService: OrganizerEventDetailServiceFactory 
 ) => {
   const gateway = useMemo<OrganizerEventDetailGateway>(
     () => ({
-      fetchEventDetail: options.gateway?.fetchEventDetail ?? fetchOrganizerEventDetail
+      fetchEventDetail: options.gateway?.fetchEventDetail ?? fetchOrganizerEventDetail,
+      publishEvent: options.gateway?.publishEvent ?? postPublishEvent
     }),
-    [options.gateway?.fetchEventDetail]
+    [options.gateway?.fetchEventDetail, options.gateway?.publishEvent]
   );
 
   const [detail, setDetail] = useState<OrganizerEventDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshToken, setRefreshToken] = useState(0);
+  const [publishing, setPublishing] = useState(false);
+  const [publishError, setPublishError] = useState<string | null>(null);
 
   const retry = useCallback(() => {
     setRefreshToken((token) => token + 1);
@@ -89,11 +100,40 @@ export const useOrganizerEventDetailService: OrganizerEventDetailServiceFactory 
     };
   }, [gateway, options.eventId, refreshToken]);
 
+  const publish = useCallback(() => {
+    if (!options.eventId || options.eventId.trim().length === 0) {
+      setPublishError('イベントIDが指定されていません。');
+      return;
+    }
+
+    setPublishing(true);
+    setPublishError(null);
+
+    gateway
+      .publishEvent(options.eventId)
+      .then(() => {
+        setRefreshToken((token) => token + 1);
+      })
+      .catch((caughtError) => {
+        const message =
+          caughtError instanceof EventApiError
+            ? caughtError.message
+            : 'イベントの公開に失敗しました。';
+        setPublishError(message);
+      })
+      .finally(() => {
+        setPublishing(false);
+      });
+  }, [gateway, options.eventId]);
+
   return {
     detail,
     loading,
     error,
-    retry
+    retry,
+    publishing,
+    publishError,
+    publish
   };
 };
 

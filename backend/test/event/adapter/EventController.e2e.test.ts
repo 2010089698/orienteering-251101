@@ -14,6 +14,10 @@ import EventDetailQueryRepository from '../../../src/event/application/port/out/
 import GetOrganizerEventDetailQueryHandler from '../../../src/event/application/query/GetOrganizerEventDetailQueryHandler';
 import type OrganizerEventDetailResponseDto from '../../../src/event/application/query/OrganizerEventDetailResponseDto';
 import Event from '../../../src/event/domain/Event';
+import PublicEventSearchCondition from '../../../src/event/application/query/participant/PublicEventSearchCondition';
+import TypeOrmPublicEventListQueryRepository from '../../../src/event/infrastructure/repository/TypeOrmPublicEventListQueryRepository';
+import { createAppWithDependencies } from '../../../src/app';
+import { createSqliteTestDataSource } from '../../support/createSqliteTestDataSource';
 
 class InMemoryEventRepository implements EventRepository {
   public readonly events: Event[] = [];
@@ -69,7 +73,8 @@ describe('EventController (E2E)', () => {
     createEventUseCase,
     defaultsQueryHandler,
     listEventsQueryHandler,
-    eventDetailQueryHandler
+    eventDetailQueryHandler,
+    publishEventUseCase
   );
 
   const app = express();
@@ -226,5 +231,108 @@ describe('EventController (E2E)', () => {
       maxRaceSchedules: 10,
       requireEndDateForMultipleRaces: true
     });
+  });
+
+  it('POST /events/:eventId/publish 正常系: イベントが公開される', async () => {
+    await request(app)
+      .post('/events')
+      .send({
+        eventId: 'event-200',
+        eventName: '公開テスト大会',
+        startDate: '2024-07-01',
+        endDate: '2024-07-02',
+        raceSchedules: [
+          { name: 'Day1', date: '2024-07-01' },
+          { name: 'Day2', date: '2024-07-02' }
+        ]
+      });
+
+    const response = await request(app).post('/events/event-200/publish');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      eventId: 'event-200',
+      eventName: '公開テスト大会',
+      isPublic: true
+    });
+
+    const stored = repository.events.find((event) => event.eventIdentifier === 'event-200');
+    expect(stored).toBeDefined();
+    expect(stored?.isPublic).toBe(true);
+  });
+
+  it('POST /events/:eventId/publish 異常系: 存在しないイベントは404を返す', async () => {
+    const response = await request(app).post('/events/unknown-event/publish');
+
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({ message: '指定されたイベントが見つかりません。' });
+  });
+
+  it('POST /events/:eventId/publish 異常系: 既に公開済みのイベントは400を返す', async () => {
+    await request(app)
+      .post('/events')
+      .send({
+        eventId: 'event-201',
+        eventName: '二重公開大会',
+        startDate: '2024-07-10',
+        endDate: '2024-07-11',
+        raceSchedules: [
+          { name: 'Day1', date: '2024-07-10' }
+        ],
+        publishImmediately: true
+      });
+
+    const response = await request(app).post('/events/event-201/publish');
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ message: 'イベントは既に公開されています。' });
+  });
+});
+
+describe('EventController (E2E) with SQLite dependencies', () => {
+  it('イベントを公開すると公開イベント一覧に含まれる', async () => {
+    const fixture = await createSqliteTestDataSource();
+    const { dataSource, cleanup } = fixture;
+    const app = createAppWithDependencies({ eventDataSource: dataSource });
+
+    try {
+      const payload = {
+        eventId: 'sqlite-public-001',
+        eventName: 'SQLite公開テスト大会',
+        startDate: '2024-10-01',
+        endDate: '2024-10-02',
+        raceSchedules: [
+          { name: '本戦', date: '2024-10-01' }
+        ]
+      } as const;
+
+      const createResponse = await request(app).post('/events').send(payload);
+      expect(createResponse.status).toBe(201);
+
+      const publishResponse = await request(app)
+        .post(`/events/${payload.eventId}/publish`)
+        .send();
+
+      expect(publishResponse.status).toBe(200);
+      expect(publishResponse.body).toEqual({
+        eventId: payload.eventId,
+        eventName: payload.eventName,
+        isPublic: true
+      });
+
+      const publicRepository = new TypeOrmPublicEventListQueryRepository(dataSource);
+      const condition = PublicEventSearchCondition.create();
+      const summaries = await publicRepository.findPublicSummaries(condition);
+
+      expect(summaries).toHaveLength(1);
+      expect(summaries[0]).toMatchObject({
+        id: payload.eventId,
+        name: payload.eventName
+      });
+      expect(summaries[0].startDate).toContain(payload.startDate);
+      expect(summaries[0].endDate).toContain('2024-10');
+    } finally {
+      await cleanup();
+    }
   });
 });

@@ -3,7 +3,8 @@ import {
   postCreateEvent,
   EventApiError,
   fetchOrganizerEvents,
-  fetchOrganizerEventDetail
+  fetchOrganizerEventDetail,
+  postPublishEvent
 } from '../eventApi';
 import type { CreateEventRequest } from '@shared/event/contracts/CreateEventContract';
 
@@ -153,6 +154,7 @@ describe('eventApi handleResponse', () => {
       endDate: '2024-04-02',
       isMultiDayEvent: true,
       isMultiRaceEvent: false,
+      isPublic: false,
       raceSchedules: [
         { name: 'Day1', date: '2024-04-01' }
       ],
@@ -167,5 +169,20 @@ describe('eventApi handleResponse', () => {
     global.fetch = jest.fn().mockResolvedValue(response);
 
     await expect(fetchOrganizerEventDetail('EVT-001')).resolves.toEqual(payload);
+  });
+
+  test('公開APIはイベントIDが未指定の場合にエラーを投げる', async () => {
+    await expect(postPublishEvent('')).rejects.toThrow('イベントIDを指定してください。');
+  });
+
+  test('公開APIが妥当なレスポンスを返す場合、公開結果を受け取る', async () => {
+    const payload = { eventId: 'EVT-002', eventName: '秋の大会', isPublic: true };
+    const response = new Response(JSON.stringify(payload), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+    global.fetch = jest.fn().mockResolvedValue(response);
+
+    await expect(postPublishEvent('EVT-002')).resolves.toEqual(payload);
   });
 });

@@ -11,6 +11,7 @@ interface OrganizerEventDetailResponseDto {
   readonly isMultiDay: boolean;
   readonly isMultiRace: boolean;
   readonly raceSchedules: ReadonlyArray<RaceScheduleDetailDto>;
+  readonly isPublic: boolean;
   readonly entryReceptionStatus: 'NOT_REGISTERED' | 'OPEN' | 'CLOSED';
   readonly startListStatus: 'NOT_CREATED' | 'DRAFT' | 'PUBLISHED';
   readonly resultPublicationStatus: 'NOT_PUBLISHED' | 'PUBLISHED';
