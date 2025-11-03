@@ -4,6 +4,7 @@ import request from 'supertest';
 
 import PublicEventController from '../../../src/event/adapter/in/web/PublicEventController';
 import ListPublicEventsQueryHandler from '../../../src/event/application/query/participant/ListPublicEventsQueryHandler';
+import GetPublicEventDetailQueryHandler from '../../../src/event/application/query/participant/GetPublicEventDetailQueryHandler';
 import PublicEventListQueryRepository from '../../../src/event/application/port/out/PublicEventListQueryRepository';
 import EventSummaryResponseDto from '../../../src/event/application/query/EventSummaryResponseDto';
 import PublicEventSearchCondition from '../../../src/event/application/query/participant/PublicEventSearchCondition';
@@ -26,7 +27,13 @@ class InMemoryPublicEventListQueryRepository
 describe('PublicEventController (E2E)', () => {
   const repository = new InMemoryPublicEventListQueryRepository();
   const handler = new ListPublicEventsQueryHandler(repository);
-  const controller = new PublicEventController(handler);
+  const detailHandlerMock: Pick<GetPublicEventDetailQueryHandler, 'execute'> = {
+    execute: jest.fn()
+  };
+  const controller = new PublicEventController(
+    handler,
+    detailHandlerMock as unknown as GetPublicEventDetailQueryHandler
+  );
 
   const app = express();
   app.use(express.json());
@@ -35,6 +42,7 @@ describe('PublicEventController (E2E)', () => {
   beforeEach(() => {
     repository.summaries = [];
     repository.receivedConditions = [];
+    (detailHandlerMock.execute as jest.Mock).mockReset();
   });
 
   it('GET /public/events 正常系: 公開イベントの一覧を返す', async () => {

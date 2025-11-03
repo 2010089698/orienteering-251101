@@ -4,7 +4,9 @@ import {
   IsArray,
   IsDateString,
   IsIn,
+  IsNotEmpty,
   IsOptional,
+  IsString,
   validate
 } from 'class-validator';
 import { Transform, plainToInstance } from 'class-transformer';
@@ -14,8 +16,11 @@ import ListPublicEventsQueryHandler from '../../../application/query/participant
 import PublicEventSearchCondition, {
   PublicEventStatus
 } from '../../../application/query/participant/PublicEventSearchCondition';
+import GetPublicEventDetailQuery from '../../../application/query/participant/GetPublicEventDetailQuery';
+import GetPublicEventDetailQueryHandler from '../../../application/query/participant/GetPublicEventDetailQueryHandler';
 import HttpValidationError from './errors/HttpValidationError';
 import { presentEventSummary } from './presenters/EventSummaryPresenter';
+import { presentPublicEventDetail } from './presenters/PublicEventDetailPresenter';
 import { mapValidationErrors } from './support/validation';
 
 function toStatuses(value: unknown): string[] | undefined {
@@ -59,14 +64,81 @@ class ListPublicEventsRequestDto {
   public status?: string[];
 }
 
+class GetPublicEventDetailParamsDto {
+  @IsString({ message: 'イベントIDは文字列で指定してください。' })
+  @IsNotEmpty({ message: 'イベントIDは必須です。' })
+  public eventId!: string;
+}
+
 export class PublicEventController {
   public readonly router: Router;
 
   public constructor(
-    private readonly listPublicEventsQueryHandler: ListPublicEventsQueryHandler
+    private readonly listPublicEventsQueryHandler: ListPublicEventsQueryHandler,
+    private readonly getPublicEventDetailQueryHandler: GetPublicEventDetailQueryHandler
   ) {
     this.router = Router();
     this.router.get('/public/events', this.handleListPublicEvents.bind(this));
+    this.router.get(
+      '/public/events/:eventId',
+      this.handleGetPublicEventDetail.bind(this)
+    );
+  }
+
+  private async handleGetPublicEventDetail(
+    request: Request,
+    response: Response
+  ): Promise<void> {
+    try {
+      const params = plainToInstance(GetPublicEventDetailParamsDto, request.params);
+      const validationErrors = await validate(params, {
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        validationError: { target: false }
+      });
+
+      if (validationErrors.length > 0) {
+        throw new HttpValidationError(mapValidationErrors(validationErrors));
+      }
+
+      const query = GetPublicEventDetailQuery.forEvent(params.eventId);
+      const detail = await this.getPublicEventDetailQueryHandler.execute(query);
+
+      response.status(200).json(presentPublicEventDetail(detail));
+    } catch (error) {
+      if (error instanceof HttpValidationError) {
+        response.status(400).json({
+          message: error.message,
+          errors: error.details
+        });
+        return;
+      }
+
+      if (error instanceof Error) {
+        if (error.message === 'イベントIDを指定してください。') {
+          response.status(400).json({
+            message: error.message
+          });
+          return;
+        }
+
+        if (error.message === '指定されたイベントが見つかりませんでした。') {
+          response.status(404).json({
+            message: error.message
+          });
+          return;
+        }
+
+        response.status(400).json({
+          message: error.message
+        });
+        return;
+      }
+
+      response.status(500).json({
+        message: '不明なエラーが発生しました。'
+      });
+    }
   }
 
   private async handleListPublicEvents(

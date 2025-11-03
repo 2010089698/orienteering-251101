@@ -9,11 +9,13 @@ import GetEventCreationDefaultsQueryHandler from './event/application/query/GetE
 import GetOrganizerEventDetailQueryHandler from './event/application/query/GetOrganizerEventDetailQueryHandler';
 import ListOrganizerEventsQueryHandler from './event/application/query/ListOrganizerEventsQueryHandler';
 import ListPublicEventsQueryHandler from './event/application/query/participant/ListPublicEventsQueryHandler';
+import GetPublicEventDetailQueryHandler from './event/application/query/participant/GetPublicEventDetailQueryHandler';
 import { createDataSource, DataSourceFactoryOptions } from './event/infrastructure/config/createDataSource';
 import TypeOrmEventListQueryRepository from './event/infrastructure/repository/TypeOrmEventListQueryRepository';
 import TypeOrmEventDetailQueryRepository from './event/infrastructure/repository/TypeOrmEventDetailQueryRepository';
 import TypeOrmEventRepository from './event/infrastructure/repository/TypeOrmEventRepository';
 import TypeOrmPublicEventListQueryRepository from './event/infrastructure/repository/TypeOrmPublicEventListQueryRepository';
+import TypeOrmPublicEventDetailQueryRepository from './event/infrastructure/repository/TypeOrmPublicEventDetailQueryRepository';
 
 export interface ApplicationDependencies {
   readonly eventDataSource: DataSource;
@@ -26,11 +28,17 @@ function assembleEventModule(app: Express, dependencies: ApplicationDependencies
   const publicEventListQueryRepository = new TypeOrmPublicEventListQueryRepository(
     dependencies.eventDataSource
   );
+  const publicEventDetailQueryRepository = new TypeOrmPublicEventDetailQueryRepository(
+    dependencies.eventDataSource
+  );
   const eventDetailQueryRepository = new TypeOrmEventDetailQueryRepository(dependencies.eventDataSource);
   const createEventUseCase = new CreateEventUseCase(eventRepository, publishEventUseCase);
   const defaultsQueryHandler = new GetEventCreationDefaultsQueryHandler();
   const listEventsQueryHandler = new ListOrganizerEventsQueryHandler(eventListQueryRepository);
   const listPublicEventsQueryHandler = new ListPublicEventsQueryHandler(publicEventListQueryRepository);
+  const getPublicEventDetailQueryHandler = new GetPublicEventDetailQueryHandler(
+    publicEventDetailQueryRepository
+  );
   const eventDetailQueryHandler = new GetOrganizerEventDetailQueryHandler(eventDetailQueryRepository);
   const eventController = new EventController(
     createEventUseCase,
@@ -39,7 +47,10 @@ function assembleEventModule(app: Express, dependencies: ApplicationDependencies
     eventDetailQueryHandler,
     publishEventUseCase
   );
-  const publicEventController = new PublicEventController(listPublicEventsQueryHandler);
+  const publicEventController = new PublicEventController(
+    listPublicEventsQueryHandler,
+    getPublicEventDetailQueryHandler
+  );
 
   app.use(publicEventController.router);
   app.use(eventController.router);
