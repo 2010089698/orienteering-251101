@@ -1,21 +1,21 @@
 import { Link } from 'react-router-dom';
 import EventPeriod from './common/EventPeriod';
-import type { OrganizerEventListServiceFactory } from './useOrganizerEventListService';
-import { useOrganizerEventListService } from './useOrganizerEventListService';
+import type { ParticipantEventListServiceFactory } from './participant/useParticipantEventListService';
+import { useParticipantEventListService } from './participant/useParticipantEventListService';
 
-interface OrganizerEventListPageProps {
-  serviceFactory?: OrganizerEventListServiceFactory;
+interface ParticipantEventListPageProps {
+  serviceFactory?: ParticipantEventListServiceFactory;
 }
 
-const OrganizerEventListPage = ({
-  serviceFactory = useOrganizerEventListService
-}: OrganizerEventListPageProps) => {
+const ParticipantEventListPage = ({
+  serviceFactory = useParticipantEventListService
+}: ParticipantEventListPageProps) => {
   const { events, loading, error, retry } = serviceFactory();
-  const headingId = 'organizer-event-list-heading';
+  const headingId = 'participant-event-list-heading';
 
   return (
     <main aria-labelledby={headingId}>
-      <h1 id={headingId}>イベント一覧</h1>
+      <h1 id={headingId}>公開イベント一覧</h1>
       {loading && (
         <p role="status" aria-live="polite">
           読み込み中...
@@ -29,14 +29,14 @@ const OrganizerEventListPage = ({
           </button>
         </div>
       )}
-      {!loading && !error && events.length === 0 && <p>登録されたイベントはありません。</p>}
+      {!loading && !error && events.length === 0 && <p>公開中のイベントはありません。</p>}
       {!loading && !error && events.length > 0 && (
-        <table aria-label="イベント一覧">
+        <table aria-label="公開イベント一覧">
           <thead>
             <tr>
               <th scope="col">イベント名</th>
               <th scope="col">開催期間</th>
-              <th scope="col">詳細</th>
+              <th scope="col">公開ページ</th>
             </tr>
           </thead>
           <tbody>
@@ -47,8 +47,11 @@ const OrganizerEventListPage = ({
                   <EventPeriod startDate={event.startDate} endDate={event.endDate} />
                 </td>
                 <td>
-                  <Link to={`/events/${event.eventId}`} aria-label={`イベント「${event.eventName}」の詳細`}>
-                    詳細
+                  <Link
+                    to={`/public/events/${event.eventId}`}
+                    aria-label={`イベント「${event.eventName}」の公開ページ`}
+                  >
+                    公開ページへ
                   </Link>
                 </td>
               </tr>
@@ -60,4 +63,4 @@ const OrganizerEventListPage = ({
   );
 };
 
-export default OrganizerEventListPage;
+export default ParticipantEventListPage;
