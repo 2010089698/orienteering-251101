@@ -147,6 +147,18 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return payload as T;
 }
 
+function parseEventSummaryListResponse(
+  response: Response,
+  payload: unknown,
+  failureMessage: string
+): EventSummaryListResponse {
+  try {
+    return eventSummaryListResponseSchema.parse(payload);
+  } catch (error) {
+    throw new EventApiError(failureMessage, response.status, error);
+  }
+}
+
 export async function fetchEventCreationDefaults(signal?: AbortSignal): Promise<EventCreationDefaultsResponse> {
   const response = await fetch(buildApiUrl('/events/defaults'), {
     method: 'GET',
@@ -189,11 +201,28 @@ export async function fetchOrganizerEvents(
 
   const payload = await handleResponse<unknown>(response);
 
-  try {
-    return eventSummaryListResponseSchema.parse(payload);
-  } catch (error) {
-    throw new EventApiError('イベント一覧のレスポンス解析に失敗しました。', response.status, error);
-  }
+  return parseEventSummaryListResponse(
+    response,
+    payload,
+    'イベント一覧のレスポンス解析に失敗しました。'
+  );
+}
+
+export async function fetchPublicEvents(
+  signal?: AbortSignal
+): Promise<EventSummaryListResponse> {
+  const response = await fetch(buildApiUrl('/public/events'), {
+    method: 'GET',
+    signal
+  });
+
+  const payload = await handleResponse<unknown>(response);
+
+  return parseEventSummaryListResponse(
+    response,
+    payload,
+    '公開イベント一覧のレスポンス解析に失敗しました。'
+  );
 }
 
 export async function fetchOrganizerEventDetail(
