@@ -150,4 +150,27 @@ describe('Event', () => {
       })
     ).toThrow('イベント名を指定してください。');
   });
+
+  it('公開状態を遷移できる', () => {
+    const period = EventPeriod.createSingleDay(new Date('2024-09-01'));
+    const schedule = RaceSchedule.create('Sprint', new Date('2024-09-01'));
+
+    const event = Event.create({
+      id: 'evt-5',
+      name: 'Autumn Cup',
+      period,
+      raceSchedules: [schedule]
+    });
+
+    expect(event.isPublic).toBe(false);
+
+    event.publish();
+    expect(event.isPublic).toBe(true);
+
+    expect(() => event.publish()).toThrow('イベントは既に公開されています。');
+
+    event.unpublish();
+    expect(event.isPublic).toBe(false);
+    expect(() => event.unpublish()).toThrow('イベントはまだ公開されていません。');
+  });
 });

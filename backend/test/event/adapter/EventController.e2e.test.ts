@@ -4,6 +4,7 @@ import request from 'supertest';
 
 import EventController from '../../../src/event/adapter/in/web/EventController';
 import CreateEventUseCase from '../../../src/event/application/command/CreateEventUseCase';
+import PublishEventUseCase from '../../../src/event/application/command/PublishEventUseCase';
 import EventRepository from '../../../src/event/application/port/out/EventRepository';
 import GetEventCreationDefaultsQueryHandler from '../../../src/event/application/query/GetEventCreationDefaultsQueryHandler';
 import EventListQueryRepository from '../../../src/event/application/port/out/EventListQueryRepository';
@@ -17,7 +18,17 @@ import Event from '../../../src/event/domain/Event';
 class InMemoryEventRepository implements EventRepository {
   public readonly events: Event[] = [];
 
+  public async findById(eventId: string): Promise<Event | null> {
+    return this.events.find((event) => event.eventIdentifier === eventId) ?? null;
+  }
+
   public async save(event: Event): Promise<void> {
+    const index = this.events.findIndex((stored) => stored.eventIdentifier === event.eventIdentifier);
+    if (index >= 0) {
+      this.events[index] = event;
+      return;
+    }
+
     this.events.push(event);
   }
 }
@@ -47,7 +58,8 @@ class InMemoryEventDetailQueryRepository implements EventDetailQueryRepository {
 
 describe('EventController (E2E)', () => {
   const repository = new InMemoryEventRepository();
-  const createEventUseCase = new CreateEventUseCase(repository);
+  const publishEventUseCase = new PublishEventUseCase(repository);
+  const createEventUseCase = new CreateEventUseCase(repository, publishEventUseCase);
   const defaultsQueryHandler = new GetEventCreationDefaultsQueryHandler();
   const eventListQueryRepository = new InMemoryEventListQueryRepository();
   const listEventsQueryHandler = new ListOrganizerEventsQueryHandler(eventListQueryRepository);
@@ -93,12 +105,39 @@ describe('EventController (E2E)', () => {
       endDate: '2024-04-03',
       isMultiDayEvent: true,
       isMultiRaceEvent: true,
+      isPublic: false,
       raceSchedules: [
         { name: '予選', date: '2024-04-01' },
         { name: '決勝', date: '2024-04-03' }
       ]
     });
     expect(repository.events).toHaveLength(1);
+  });
+
+  it('POST /events 正常系: 即時公開指定で公開済みとして返却される', async () => {
+    const response = await request(app)
+      .post('/events')
+      .send({
+        eventId: 'event-102',
+        eventName: '即時公開大会',
+        startDate: '2024-05-01',
+        endDate: '2024-05-02',
+        publishImmediately: true,
+        raceSchedules: [
+          { name: '初日', date: '2024-05-01' },
+          { name: '二日目', date: '2024-05-02' }
+        ]
+      });
+
+    expect(response.status).toBe(201);
+    expect(response.body).toMatchObject({
+      eventId: 'event-102',
+      isPublic: true
+    });
+
+    const stored = repository.events.find((event) => event.eventIdentifier === 'event-102');
+    expect(stored).toBeDefined();
+    expect(stored?.isPublic).toBe(true);
   });
 
   it('POST /events 異常系: 終了日未指定で複数レースの場合はバリデーションエラー', async () => {

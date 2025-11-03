@@ -7,6 +7,7 @@ export interface EventProps {
   name: string;
   period: EventPeriod;
   raceSchedules: RaceSchedule[];
+  isPublic?: boolean;
 }
 
 export class Event {
@@ -16,7 +17,8 @@ export class Event {
     private readonly eventPeriod: EventPeriod,
     private readonly multiDay: boolean,
     private readonly multiRace: boolean,
-    private readonly schedules: ReadonlyArray<RaceSchedule>
+    private readonly schedules: ReadonlyArray<RaceSchedule>,
+    private isPubliclyVisible: boolean
   ) {}
 
   public static create(props: EventProps): Event {
@@ -54,7 +56,8 @@ export class Event {
       period,
       isMultiDay,
       isMultiRace,
-      Object.freeze([...props.raceSchedules])
+      Object.freeze([...props.raceSchedules]),
+      props.isPublic ?? false
     );
   }
 
@@ -80,6 +83,26 @@ export class Event {
 
   public get raceSchedules(): ReadonlyArray<RaceSchedule> {
     return [...this.schedules];
+  }
+
+  public get isPublic(): boolean {
+    return this.isPubliclyVisible;
+  }
+
+  public publish(): void {
+    if (this.isPubliclyVisible) {
+      throw new Error('イベントは既に公開されています。');
+    }
+
+    this.isPubliclyVisible = true;
+  }
+
+  public unpublish(): void {
+    if (!this.isPubliclyVisible) {
+      throw new Error('イベントはまだ公開されていません。');
+    }
+
+    this.isPubliclyVisible = false;
   }
 }
 

@@ -1,6 +1,8 @@
 import { Column, Entity, OneToMany, PrimaryColumn } from 'typeorm';
 
 import Event from '../../domain/Event';
+import EventPeriod from '../../domain/EventPeriod';
+import RaceSchedule from '../../domain/RaceSchedule';
 import { DEFAULT_ORGANIZER_ID } from '../../application/OrganizerContext';
 import { RaceScheduleEntity } from './RaceScheduleEntity';
 
@@ -45,6 +47,24 @@ export function mapEventToEntity(event: Event): EventEntity {
   entity.endDate = event.eventDuration.endDate;
   entity.isMultiDay = event.isMultiDayEvent;
   entity.isMultiRace = event.isMultiRaceEvent;
-  entity.isPublic = false;
+  entity.isPublic = event.isPublic;
   return entity;
+}
+
+export function mapEntityToEvent(
+  event: EventEntity,
+  raceSchedules: RaceScheduleEntity[]
+): Event {
+  const period = EventPeriod.createFromBoundaries(event.startDate, event.endDate);
+  const domainSchedules = raceSchedules
+    .map((schedule) => RaceSchedule.create(schedule.name, schedule.scheduledDate))
+    .sort((left, right) => left.dayIdentifier - right.dayIdentifier);
+
+  return Event.create({
+    id: event.id,
+    name: event.name,
+    period,
+    raceSchedules: domainSchedules,
+    isPublic: event.isPublic
+  });
 }

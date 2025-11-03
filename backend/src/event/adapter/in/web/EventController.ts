@@ -3,6 +3,7 @@ import { Request, Response, Router } from 'express';
 import {
   ArrayNotEmpty,
   IsArray,
+  IsBoolean,
   IsDateString,
   IsNotEmpty,
   IsOptional,
@@ -79,6 +80,10 @@ class CreateEventRequestDto implements CreateEventRequest {
   @ValidateNested({ each: true })
   @Type(() => RaceScheduleRequestDto)
   public raceSchedules!: RaceScheduleRequestDto[];
+
+  @IsOptional()
+  @IsBoolean({ message: '公開フラグは真偽値で指定してください。' })
+  public publishImmediately?: boolean;
 
   @Validate(EventDateConsistencyValidator)
   public get dates(): boolean {
@@ -169,6 +174,7 @@ export class EventController {
         endDate: formatDateOnly(event.eventDuration.endDate),
         isMultiDayEvent: event.isMultiDayEvent,
         isMultiRaceEvent: event.isMultiRaceEvent,
+        isPublic: event.isPublic,
         raceSchedules: event.raceSchedules.map((schedule: RaceSchedule) => ({
           name: schedule.name,
           date: formatDateOnly(schedule.date)
@@ -217,7 +223,8 @@ export class EventController {
       eventName: dto.eventName,
       startDate: dto.startDate,
       endDate: dto.endDate,
-      raceSchedules: races
+      raceSchedules: races,
+      publishImmediately: dto.publishImmediately
     });
   }
 
