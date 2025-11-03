@@ -27,6 +27,9 @@ export class EventEntity {
   @Column({ name: 'is_multi_race', type: 'boolean' })
   public isMultiRace!: boolean;
 
+  @Column({ name: 'is_public', type: 'boolean', default: false })
+  public isPublic!: boolean;
+
   @OneToMany(() => RaceScheduleEntity, (schedule) => schedule.event, {
     cascade: false,
   })
@@ -42,5 +45,6 @@ export function mapEventToEntity(event: Event): EventEntity {
   entity.endDate = event.eventDuration.endDate;
   entity.isMultiDay = event.isMultiDayEvent;
   entity.isMultiRace = event.isMultiRaceEvent;
+  entity.isPublic = false;
   return entity;
 }

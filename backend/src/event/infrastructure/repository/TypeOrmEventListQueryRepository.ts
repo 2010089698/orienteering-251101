@@ -3,6 +3,7 @@ import { DataSource } from 'typeorm';
 import EventListQueryRepository from '../../application/port/out/EventListQueryRepository';
 import EventSummaryResponseDto from '../../application/query/EventSummaryResponseDto';
 import { EventEntity } from './EventEntity';
+import { mapEventEntityToSummary } from './mappers/EventSummaryMapper';
 
 export class TypeOrmEventListQueryRepository implements EventListQueryRepository {
   public constructor(private readonly dataSource: DataSource) {}
@@ -18,18 +19,7 @@ export class TypeOrmEventListQueryRepository implements EventListQueryRepository
       .orderBy('event.start_date', 'ASC')
       .getMany();
 
-    return events.map((event) => this.mapToDto(event));
-  }
-
-  private mapToDto(event: EventEntity): EventSummaryResponseDto {
-    return {
-      id: event.id,
-      name: event.name,
-      startDate: event.startDate.toISOString(),
-      endDate: event.endDate.toISOString(),
-      isMultiDay: event.isMultiDay,
-      isMultiRace: event.isMultiRace
-    };
+    return events.map((event) => mapEventEntityToSummary(event));
   }
 }
 
