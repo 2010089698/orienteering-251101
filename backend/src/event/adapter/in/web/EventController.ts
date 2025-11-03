@@ -8,7 +8,6 @@ import {
   IsOptional,
   IsString,
   ValidateNested,
-  ValidationError,
   validate
 } from 'class-validator';
 import { plainToInstance, Type } from 'class-transformer';
@@ -26,14 +25,11 @@ import GetOrganizerEventDetailQuery from '../../../application/query/GetOrganize
 import GetOrganizerEventDetailQueryHandler from '../../../application/query/GetOrganizerEventDetailQueryHandler';
 import ListOrganizerEventsQuery from '../../../application/query/ListOrganizerEventsQuery';
 import ListOrganizerEventsQueryHandler from '../../../application/query/ListOrganizerEventsQueryHandler';
-import EventSummaryResponseDto from '../../../application/query/EventSummaryResponseDto';
 import RaceSchedule from '../../../domain/RaceSchedule';
-
-class HttpValidationError extends Error {
-  constructor(public readonly details: string[]) {
-    super('入力値が不正です。');
-  }
-}
+import HttpValidationError from './errors/HttpValidationError';
+import { presentEventSummary } from './presenters/EventSummaryPresenter';
+import { formatDateOnly } from './support/date';
+import { mapValidationErrors } from './support/validation';
 
 class RaceScheduleRequestDto implements RaceScheduleRequest {
   @IsString({ message: 'レース名は文字列で指定してください。' })
@@ -90,26 +86,6 @@ class CreateEventRequestDto implements CreateEventRequest {
   }
 }
 
-function formatDateOnly(value: Date): string {
-  return value.toISOString().split('T')[0];
-}
-
-function mapValidationErrors(errors: ValidationError[]): string[] {
-  const messages: string[] = [];
-
-  for (const error of errors) {
-    if (error.constraints) {
-      messages.push(...Object.values(error.constraints));
-    }
-
-    if (error.children && error.children.length > 0) {
-      messages.push(...mapValidationErrors(error.children));
-    }
-  }
-
-  return messages;
-}
-
 export class EventController {
   public readonly router: Router;
 
@@ -155,7 +131,7 @@ export class EventController {
       const query = ListOrganizerEventsQuery.forOrganizer(organizerId);
       const summaries = await this.listEventsQueryHandler.execute(query);
 
-      response.status(200).json(summaries.map((summary) => this.mapToListResponse(summary)));
+      response.status(200).json(summaries.map((summary) => presentEventSummary(summary)));
     } catch (error) {
       if (error instanceof Error) {
         response.status(400).json({
@@ -257,27 +233,6 @@ export class EventController {
     return String(raw).trim();
   }
 
-  private mapToListResponse(summary: EventSummaryResponseDto) {
-    const startDate = new Date(summary.startDate);
-    const endDate = new Date(summary.endDate);
-
-    if (Number.isNaN(startDate.getTime())) {
-      throw new Error('イベント開始日の形式が不正です。');
-    }
-
-    if (Number.isNaN(endDate.getTime())) {
-      throw new Error('イベント終了日の形式が不正です。');
-    }
-
-    return {
-      eventId: summary.id,
-      eventName: summary.name,
-      startDate: formatDateOnly(startDate),
-      endDate: formatDateOnly(endDate),
-      isMultiDayEvent: summary.isMultiDay,
-      isMultiRaceEvent: summary.isMultiRace
-    };
-  }
 }
 
 export default EventController;
