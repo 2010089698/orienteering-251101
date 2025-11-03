@@ -91,7 +91,7 @@ describe('PublicEventController (E2E)', () => {
     const [condition] = repository.receivedConditions;
     expect(Array.from(condition.statuses)).toEqual(['upcoming', 'ongoing']);
     expect(condition.startDateFrom?.toISOString()).toBe('2024-06-01T00:00:00.000Z');
-    expect(condition.startDateTo?.toISOString()).toBe('2024-06-30T00:00:00.000Z');
+    expect(condition.startDateTo?.toISOString()).toBe('2024-06-30T23:59:59.999Z');
   });
 
   it('GET /public/events 異常系: 日付形式が不正な場合はバリデーションエラー', async () => {
