@@ -7,6 +7,10 @@ import {
   organizerEventDetailResponseSchema,
   type OrganizerEventDetailResponse
 } from '@shared/event/contracts/OrganizerEventDetailContract';
+import {
+  publicEventDetailResponseSchema,
+  type PublicEventDetailResponse
+} from '@shared/event/contracts/PublicEventDetailContract';
 
 export interface EventCreationDefaultsResponse {
   dateFormat: string;
@@ -253,6 +257,30 @@ export async function fetchOrganizerEventDetail(
     return organizerEventDetailResponseSchema.parse(payload);
   } catch (error) {
     throw new EventApiError('イベント詳細のレスポンス解析に失敗しました。', response.status, error);
+  }
+}
+
+export async function fetchPublicEventDetail(
+  eventId: string,
+  signal?: AbortSignal
+): Promise<PublicEventDetailResponse> {
+  if (!eventId || eventId.trim().length === 0) {
+    throw new EventApiError('イベントIDを指定してください。', 400, {
+      reason: 'MISSING_EVENT_ID'
+    });
+  }
+
+  const response = await fetch(buildApiUrl(`/public/events/${encodeURIComponent(eventId)}`), {
+    method: 'GET',
+    signal
+  });
+
+  const payload = await handleResponse<unknown>(response);
+
+  try {
+    return publicEventDetailResponseSchema.parse(payload);
+  } catch (error) {
+    throw new EventApiError('公開イベント詳細のレスポンス解析に失敗しました。', response.status, error);
   }
 }
 
