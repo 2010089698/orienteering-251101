@@ -51,6 +51,33 @@ class EntryReception {
     );
   }
 
+  public static restore(props: EntryReceptionProps): EntryReception {
+    const eventId = props.eventId?.trim();
+    if (!eventId) {
+      throw new Error('イベントIDを指定してください。');
+    }
+
+    const raceId = props.raceId?.trim();
+    if (!raceId) {
+      throw new Error('レースIDを指定してください。');
+    }
+
+    if (!props.receptionWindow) {
+      throw new Error('受付期間を指定してください。');
+    }
+
+    if (!props.entryClasses || props.entryClasses.length === 0) {
+      throw new Error('エントリークラスを1つ以上指定してください。');
+    }
+
+    return new EntryReception(
+      eventId,
+      raceId,
+      props.receptionWindow,
+      Object.freeze([...props.entryClasses])
+    );
+  }
+
   public get eventIdentifier(): string {
     return this.eventId;
   }

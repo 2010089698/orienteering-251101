@@ -245,6 +245,7 @@ describe('EventController (SQLite 統合)', () => {
       endDate: '2024-10-02',
       isMultiDayEvent: true,
       isMultiRaceEvent: true,
+      isPublic: false,
       raceSchedules: [
         { name: 'Day1', date: '2024-10-01' }
       ],

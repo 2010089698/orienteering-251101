@@ -5,6 +5,8 @@ import { DataSource } from 'typeorm';
 
 import { EventEntity } from '../repository/EventEntity';
 import { RaceScheduleEntity } from '../repository/RaceScheduleEntity';
+import EntryReceptionEntity from '../../../entryReception/infrastructure/repository/EntryReceptionEntity';
+import EntryReceptionClassEntity from '../../../entryReception/infrastructure/repository/EntryReceptionClassEntity';
 
 export interface DataSourceFactoryOptions {
   readonly databasePath?: string;
@@ -68,7 +70,12 @@ export async function createDataSource(
   const dataSource = new DataSource({
     type: 'sqlite',
     database: databasePath,
-    entities: [EventEntity, RaceScheduleEntity],
+    entities: [
+      EventEntity,
+      RaceScheduleEntity,
+      EntryReceptionEntity,
+      EntryReceptionClassEntity,
+    ],
     synchronize: true,
   });
 
