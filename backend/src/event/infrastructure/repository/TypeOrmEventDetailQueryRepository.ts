@@ -5,6 +5,30 @@ import OrganizerEventDetailResponseDto, {
   RaceScheduleDetailDto
 } from '../../application/query/OrganizerEventDetailResponseDto';
 import { EventEntity } from './EventEntity';
+import EntryReceptionEntity from '../../../entryReception/infrastructure/repository/EntryReceptionEntity';
+
+type EntryReceptionStatus =
+  | 'NOT_REGISTERED'
+  | 'OPEN'
+  | 'CLOSED';
+
+function determineEntryReceptionStatus(
+  receptions: EntryReceptionEntity[],
+  referenceDate: Date
+): EntryReceptionStatus {
+  if (receptions.length === 0) {
+    return 'NOT_REGISTERED';
+  }
+
+  const now = referenceDate.getTime();
+  const isOpen = receptions.some((reception) => {
+    const start = reception.receptionStart.getTime();
+    const end = reception.receptionEnd.getTime();
+    return start <= now && now <= end;
+  });
+
+  return isOpen ? 'OPEN' : 'CLOSED';
+}
 
 export class TypeOrmEventDetailQueryRepository implements EventDetailQueryRepository {
   public constructor(private readonly dataSource: DataSource) {}
@@ -32,6 +56,16 @@ export class TypeOrmEventDetailQueryRepository implements EventDetailQueryReposi
       }))
       .sort((a, b) => a.scheduledDate.getTime() - b.scheduledDate.getTime());
 
+    const entryReceptionRepository = this.dataSource.getRepository(EntryReceptionEntity);
+    const entryReceptions = await entryReceptionRepository.find({
+      where: { eventId },
+    });
+
+    const entryReceptionStatus = determineEntryReceptionStatus(
+      entryReceptions,
+      new Date()
+    );
+
     return {
       id: event.id,
       name: event.name,
@@ -41,7 +75,7 @@ export class TypeOrmEventDetailQueryRepository implements EventDetailQueryReposi
       isMultiRace: event.isMultiRace,
       isPublic: event.isPublic,
       raceSchedules,
-      entryReceptionStatus: 'NOT_REGISTERED',
+      entryReceptionStatus,
       startListStatus: 'NOT_CREATED',
       resultPublicationStatus: 'NOT_PUBLISHED'
     } satisfies OrganizerEventDetailResponseDto;
