@@ -2,7 +2,11 @@ import cors from 'cors';
 import express, { Express } from 'express';
 import { DataSource } from 'typeorm';
 
-import { EventController, PublicEventController } from './event/adapter/in/web';
+import {
+  EntryReceptionController,
+  EventController,
+  PublicEventController
+} from './event/adapter/in/web';
 import CreateEventUseCase from './event/application/command/CreateEventUseCase';
 import PublishEventUseCase from './event/application/command/PublishEventUseCase';
 import GetEventCreationDefaultsQueryHandler from './event/application/query/GetEventCreationDefaultsQueryHandler';
@@ -16,6 +20,11 @@ import TypeOrmEventDetailQueryRepository from './event/infrastructure/repository
 import TypeOrmEventRepository from './event/infrastructure/repository/TypeOrmEventRepository';
 import TypeOrmPublicEventListQueryRepository from './event/infrastructure/repository/TypeOrmPublicEventListQueryRepository';
 import TypeOrmPublicEventDetailQueryRepository from './event/infrastructure/repository/TypeOrmPublicEventDetailQueryRepository';
+import RegisterEntryReceptionUseCase from './entryReception/application/command/RegisterEntryReceptionUseCase';
+import GetEntryReceptionPreparationQueryHandler from './entryReception/application/query/GetEntryReceptionPreparationQueryHandler';
+import TypeOrmEntryReceptionRepository from './entryReception/infrastructure/repository/TypeOrmEntryReceptionRepository';
+import TypeOrmEntryReceptionQueryRepository from './entryReception/infrastructure/repository/TypeOrmEntryReceptionQueryRepository';
+import TypeOrmEventScheduleQueryRepository from './entryReception/infrastructure/repository/TypeOrmEventScheduleQueryRepository';
 
 export interface ApplicationDependencies {
   readonly eventDataSource: DataSource;
@@ -40,6 +49,18 @@ function assembleEventModule(app: Express, dependencies: ApplicationDependencies
     publicEventDetailQueryRepository
   );
   const eventDetailQueryHandler = new GetOrganizerEventDetailQueryHandler(eventDetailQueryRepository);
+  const entryReceptionRepository = new TypeOrmEntryReceptionRepository(dependencies.eventDataSource);
+  const eventScheduleQueryRepository = new TypeOrmEventScheduleQueryRepository(dependencies.eventDataSource);
+  const entryReceptionPreparationQueryRepository = new TypeOrmEntryReceptionQueryRepository(
+    dependencies.eventDataSource
+  );
+  const registerEntryReceptionUseCase = new RegisterEntryReceptionUseCase(
+    entryReceptionRepository,
+    eventScheduleQueryRepository
+  );
+  const getEntryReceptionPreparationQueryHandler = new GetEntryReceptionPreparationQueryHandler(
+    entryReceptionPreparationQueryRepository
+  );
   const eventController = new EventController(
     createEventUseCase,
     defaultsQueryHandler,
@@ -51,8 +72,13 @@ function assembleEventModule(app: Express, dependencies: ApplicationDependencies
     listPublicEventsQueryHandler,
     getPublicEventDetailQueryHandler
   );
+  const entryReceptionController = new EntryReceptionController(
+    registerEntryReceptionUseCase,
+    getEntryReceptionPreparationQueryHandler
+  );
 
   app.use(publicEventController.router);
+  app.use(entryReceptionController.router);
   app.use(eventController.router);
 }
 
