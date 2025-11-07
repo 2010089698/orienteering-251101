@@ -11,6 +11,12 @@ import {
   publicEventDetailResponseSchema,
   type PublicEventDetailResponse
 } from '@shared/event/contracts/PublicEventDetailContract';
+import {
+  entryReceptionCreationDefaultsResponseSchema,
+  type EntryReceptionCreationDefaultsResponse as EntryReceptionCreationDefaultsContractResponse,
+  type EntryReceptionRaceDefaults as EntryReceptionRaceDefaultsContract,
+  type EntryReceptionClassTemplate as EntryReceptionClassTemplateContract
+} from '@shared/event/contracts/EntryReceptionCreationDefaultsContract';
 
 export interface EventCreationDefaultsResponse {
   dateFormat: string;
@@ -37,25 +43,11 @@ export interface PublishEventResponseDto {
   isPublic: boolean;
 }
 
-export interface EntryReceptionClassTemplateDto {
-  classId: string;
-  name: string;
-  capacity?: number | null;
-}
+export type EntryReceptionClassTemplateDto = EntryReceptionClassTemplateContract;
 
-export interface EntryReceptionRaceDefaultsDto {
-  raceId: string;
-  raceName: string;
-  defaultReceptionStart?: string | null;
-  defaultReceptionEnd?: string | null;
-  classTemplates: EntryReceptionClassTemplateDto[];
-}
+export type EntryReceptionRaceDefaultsDto = EntryReceptionRaceDefaultsContract;
 
-export interface EntryReceptionCreationDefaultsResponse {
-  eventId: string;
-  eventName: string;
-  races: EntryReceptionRaceDefaultsDto[];
-}
+export type EntryReceptionCreationDefaultsResponse = EntryReceptionCreationDefaultsContractResponse;
 
 export interface EntryReceptionClassRequestDto {
   classId?: string;
@@ -364,7 +356,13 @@ export async function fetchEntryReceptionCreationDefaults(
     }
   );
 
-  return handleResponse<EntryReceptionCreationDefaultsResponse>(response);
+  const payload = await handleResponse<unknown>(response);
+
+  try {
+    return entryReceptionCreationDefaultsResponseSchema.parse(payload);
+  } catch (error) {
+    throw new EventApiError('エントリー受付初期値のレスポンス解析に失敗しました。', response.status, error);
+  }
 }
 
 export async function postEntryReception(
