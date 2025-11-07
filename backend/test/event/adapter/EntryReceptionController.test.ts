@@ -30,19 +30,19 @@ describe('EntryReceptionController', () => {
     }
   });
 
-  async function seedEventWithRace(
+  async function seedEventWithRaces(
     eventId: string,
-    raceId: string,
+    eventName: string,
     eventStart: Date,
     eventEnd: Date,
-    raceDate: Date
+    races: Array<{ raceId: string; scheduledDate: Date }>
   ): Promise<void> {
     const eventRepository = dataSource.getRepository(EventEntity);
     const raceRepository = dataSource.getRepository(RaceScheduleEntity);
 
     const event = eventRepository.create({
       id: eventId,
-      name: 'エントリー受付テスト大会',
+      name: eventName,
       organizerId: DEFAULT_ORGANIZER_ID,
       startDate: eventStart,
       endDate: eventEnd,
@@ -52,13 +52,92 @@ describe('EntryReceptionController', () => {
     });
     await eventRepository.save(event);
 
-    const race = raceRepository.create({
-      eventId,
-      name: raceId,
-      scheduledDate: raceDate
-    });
-    await raceRepository.save(race);
+    for (const race of races) {
+      const raceEntity = raceRepository.create({
+        eventId,
+        name: race.raceId,
+        scheduledDate: race.scheduledDate
+      });
+      await raceRepository.save(raceEntity);
+    }
   }
+
+  async function seedEntryReception(
+    eventId: string,
+    raceId: string,
+    receptionStart: Date,
+    receptionEnd: Date,
+    entryClasses: Array<{ classId: string; name: string; capacity?: number | null }>
+  ): Promise<void> {
+    const entryReceptionRepository = dataSource.getRepository(EntryReceptionEntity);
+    const entryClassRepository = dataSource.getRepository(EntryReceptionClassEntity);
+
+    const entryReception = entryReceptionRepository.create({
+      eventId,
+      raceId,
+      receptionStart,
+      receptionEnd
+    });
+    await entryReceptionRepository.save(entryReception);
+
+    for (const entryClass of entryClasses) {
+      const classEntity = entryClassRepository.create({
+        eventId,
+        raceId,
+        classId: entryClass.classId,
+        name: entryClass.name,
+        capacity: entryClass.capacity ?? null
+      });
+      await entryClassRepository.save(classEntity);
+    }
+  }
+
+  it('GET /events/:eventId/entry-receptions/create がイベント情報と初期値を返す', async () => {
+    const eventId = 'event-entry-defaults';
+    const now = new Date();
+    const eventStart = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const eventEnd = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    const firstRaceDate = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+    const secondRaceDate = new Date(now.getTime() + 3 * 60 * 60 * 1000);
+
+    await seedEventWithRaces(eventId, 'エントリー受付テスト大会', eventStart, eventEnd, [
+      { raceId: 'long', scheduledDate: firstRaceDate },
+      { raceId: 'sprint', scheduledDate: secondRaceDate }
+    ]);
+
+    const defaultReceptionStart = new Date(now.getTime() - 60 * 60 * 1000);
+    const defaultReceptionEnd = new Date(now.getTime() + 6 * 60 * 60 * 1000);
+
+    await seedEntryReception(eventId, 'long', defaultReceptionStart, defaultReceptionEnd, [
+      { classId: 'class-1', name: '男子エリート', capacity: 50 },
+      { classId: 'class-2', name: '女子エリート' }
+    ]);
+
+    const response = await request(app).get(`/events/${eventId}/entry-receptions/create`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      eventId,
+      eventName: 'エントリー受付テスト大会',
+      races: [
+        {
+          raceId: 'long',
+          raceName: 'long',
+          defaultReceptionStart: defaultReceptionStart.toISOString(),
+          defaultReceptionEnd: defaultReceptionEnd.toISOString(),
+          classTemplates: [
+            { classId: 'class-1', name: '男子エリート', capacity: 50 },
+            { classId: 'class-2', name: '女子エリート' }
+          ]
+        },
+        {
+          raceId: 'sprint',
+          raceName: 'sprint',
+          classTemplates: []
+        }
+      ]
+    });
+  });
 
   it('POST /events/:eventId/entry-receptions 成功時に受付情報を登録して返却する', async () => {
     const eventId = 'event-entry-001';
@@ -67,17 +146,25 @@ describe('EntryReceptionController', () => {
     const eventStart = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     const eventEnd = new Date(now.getTime() + 24 * 60 * 60 * 1000);
     const raceDate = new Date(now.getTime() + 3 * 60 * 60 * 1000);
-    await seedEventWithRace(eventId, raceId, eventStart, eventEnd, raceDate);
+    await seedEventWithRaces(eventId, 'エントリー受付テスト大会', eventStart, eventEnd, [
+      { raceId, scheduledDate: raceDate }
+    ]);
 
-    const preparationResponse = await request(app).get(
+    const defaultsResponse = await request(app).get(
       `/events/${eventId}/entry-receptions/create`
     );
 
-    expect(preparationResponse.status).toBe(200);
-    expect(preparationResponse.body).toEqual({
+    expect(defaultsResponse.status).toBe(200);
+    expect(defaultsResponse.body).toEqual({
       eventId,
-      entryReceptionStatus: 'NOT_REGISTERED',
-      raceReceptions: []
+      eventName: 'エントリー受付テスト大会',
+      races: [
+        {
+          raceId,
+          raceName: raceId,
+          classTemplates: []
+        }
+      ]
     });
 
     const receptionStart = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
@@ -139,7 +226,9 @@ describe('EntryReceptionController', () => {
     const eventStart = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     const eventEnd = new Date(now.getTime() + 24 * 60 * 60 * 1000);
     const raceDate = new Date(now.getTime() + 3 * 60 * 60 * 1000);
-    await seedEventWithRace(eventId, raceId, eventStart, eventEnd, raceDate);
+    await seedEventWithRaces(eventId, 'エントリー受付テスト大会', eventStart, eventEnd, [
+      { raceId, scheduledDate: raceDate }
+    ]);
 
     const response = await request(app)
       .post(`/events/${eventId}/entry-receptions`)

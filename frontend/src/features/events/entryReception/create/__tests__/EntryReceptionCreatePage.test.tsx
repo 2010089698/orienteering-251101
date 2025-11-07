@@ -9,8 +9,9 @@ import {
   useEntryReceptionCreateService
 } from '../application/useEntryReceptionCreateService';
 import { EventApiError } from '../../../api/eventApi';
+import type { EntryReceptionCreationDefaultsResponse } from '@shared/event/contracts/EntryReceptionCreationDefaultsContract';
 
-const DEFAULT_GATEWAY_RESPONSE = {
+const DEFAULT_GATEWAY_RESPONSE: EntryReceptionCreationDefaultsResponse = {
   eventId: 'EVT-001',
   eventName: '春の大会',
   races: [

@@ -22,9 +22,11 @@ import TypeOrmPublicEventListQueryRepository from './event/infrastructure/reposi
 import TypeOrmPublicEventDetailQueryRepository from './event/infrastructure/repository/TypeOrmPublicEventDetailQueryRepository';
 import RegisterEntryReceptionUseCase from './entryReception/application/command/RegisterEntryReceptionUseCase';
 import GetEntryReceptionPreparationQueryHandler from './entryReception/application/query/GetEntryReceptionPreparationQueryHandler';
+import GetEntryReceptionCreationDefaultsQueryHandler from './entryReception/application/query/GetEntryReceptionCreationDefaultsQueryHandler';
 import TypeOrmEntryReceptionRepository from './entryReception/infrastructure/repository/TypeOrmEntryReceptionRepository';
 import TypeOrmEntryReceptionQueryRepository from './entryReception/infrastructure/repository/TypeOrmEntryReceptionQueryRepository';
 import TypeOrmEventScheduleQueryRepository from './entryReception/infrastructure/repository/TypeOrmEventScheduleQueryRepository';
+import TypeOrmEntryReceptionCreationDefaultsQueryRepository from './entryReception/infrastructure/repository/TypeOrmEntryReceptionCreationDefaultsQueryRepository';
 
 export interface ApplicationDependencies {
   readonly eventDataSource: DataSource;
@@ -54,12 +56,17 @@ function assembleEventModule(app: Express, dependencies: ApplicationDependencies
   const entryReceptionPreparationQueryRepository = new TypeOrmEntryReceptionQueryRepository(
     dependencies.eventDataSource
   );
+  const entryReceptionCreationDefaultsQueryRepository =
+    new TypeOrmEntryReceptionCreationDefaultsQueryRepository(dependencies.eventDataSource);
   const registerEntryReceptionUseCase = new RegisterEntryReceptionUseCase(
     entryReceptionRepository,
     eventScheduleQueryRepository
   );
   const getEntryReceptionPreparationQueryHandler = new GetEntryReceptionPreparationQueryHandler(
     entryReceptionPreparationQueryRepository
+  );
+  const getEntryReceptionCreationDefaultsQueryHandler = new GetEntryReceptionCreationDefaultsQueryHandler(
+    entryReceptionCreationDefaultsQueryRepository
   );
   const eventController = new EventController(
     createEventUseCase,
@@ -74,7 +81,8 @@ function assembleEventModule(app: Express, dependencies: ApplicationDependencies
   );
   const entryReceptionController = new EntryReceptionController(
     registerEntryReceptionUseCase,
-    getEntryReceptionPreparationQueryHandler
+    getEntryReceptionPreparationQueryHandler,
+    getEntryReceptionCreationDefaultsQueryHandler
   );
 
   app.use(publicEventController.router);

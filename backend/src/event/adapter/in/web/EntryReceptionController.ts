@@ -22,6 +22,12 @@ import EntryReceptionPreparationResponseDto, {
   RaceEntryReceptionDto,
   EntryReceptionClassDto as PreparationEntryReceptionClassDto
 } from '../../../../entryReception/application/query/EntryReceptionPreparationResponseDto';
+import GetEntryReceptionCreationDefaultsQuery from '../../../../entryReception/application/query/GetEntryReceptionCreationDefaultsQuery';
+import GetEntryReceptionCreationDefaultsQueryHandler from '../../../../entryReception/application/query/GetEntryReceptionCreationDefaultsQueryHandler';
+import EntryReceptionCreationDefaultsResponseDto, {
+  EntryReceptionClassTemplateDto as CreationDefaultsClassTemplateDto,
+  EntryReceptionRaceDefaultsDto as CreationDefaultsRaceDefaultsDto
+} from '../../../../entryReception/application/query/EntryReceptionCreationDefaultsResponseDto';
 import HttpValidationError from './errors/HttpValidationError';
 import { mapValidationErrors } from './support/validation';
 
@@ -97,6 +103,30 @@ interface PresentedEntryReceptionPreparationResponse {
   readonly raceReceptions: ReadonlyArray<PresentedRaceEntryReception>;
 }
 
+interface PresentedEntryReceptionClassTemplate {
+  readonly classId: string;
+  readonly name: string;
+  readonly capacity?: number;
+}
+
+interface PresentedEntryReceptionRaceDefaults {
+  readonly raceId: string;
+  readonly raceName: string;
+  readonly defaultReceptionStart?: string;
+  readonly defaultReceptionEnd?: string;
+  readonly classTemplates: ReadonlyArray<PresentedEntryReceptionClassTemplate>;
+}
+
+interface PresentedEntryReceptionCreationDefaultsResponse {
+  readonly eventId: string;
+  readonly eventName: string;
+  readonly races: ReadonlyArray<PresentedEntryReceptionRaceDefaults>;
+}
+
+function formatOptionalDate(value?: Date): string | undefined {
+  return value ? value.toISOString() : undefined;
+}
+
 function presentEntryReceptionPreparation(
   preparation: EntryReceptionPreparationResponseDto,
   referenceDate: Date
@@ -119,17 +149,44 @@ function presentEntryReceptionPreparation(
   };
 }
 
+function presentEntryReceptionCreationDefaults(
+  defaults: EntryReceptionCreationDefaultsResponseDto
+): PresentedEntryReceptionCreationDefaultsResponse {
+  const races: PresentedEntryReceptionRaceDefaults[] = defaults.races.map(
+    (race: CreationDefaultsRaceDefaultsDto) => ({
+      raceId: race.raceId,
+      raceName: race.raceName,
+      defaultReceptionStart: formatOptionalDate(race.defaultReceptionStart),
+      defaultReceptionEnd: formatOptionalDate(race.defaultReceptionEnd),
+      classTemplates: race.classTemplates.map(
+        (template: CreationDefaultsClassTemplateDto): PresentedEntryReceptionClassTemplate => ({
+          classId: template.classId,
+          name: template.name,
+          capacity: template.capacity
+        })
+      )
+    })
+  );
+
+  return {
+    eventId: defaults.eventId,
+    eventName: defaults.eventName,
+    races
+  };
+}
+
 export class EntryReceptionController {
   public readonly router: Router;
 
   public constructor(
     private readonly registerEntryReceptionUseCase: RegisterEntryReceptionUseCase,
-    private readonly entryReceptionPreparationQueryHandler: GetEntryReceptionPreparationQueryHandler
+    private readonly entryReceptionPreparationQueryHandler: GetEntryReceptionPreparationQueryHandler,
+    private readonly entryReceptionCreationDefaultsQueryHandler: GetEntryReceptionCreationDefaultsQueryHandler
   ) {
     this.router = Router();
     this.router.get(
       '/events/:eventId/entry-receptions/create',
-      this.handleGetEntryReceptionPreparation.bind(this)
+      this.handleGetEntryReceptionCreationDefaults.bind(this)
     );
     this.router.post(
       '/events/:eventId/entry-receptions',
@@ -137,15 +194,15 @@ export class EntryReceptionController {
     );
   }
 
-  private async handleGetEntryReceptionPreparation(
+  private async handleGetEntryReceptionCreationDefaults(
     request: Request,
     response: Response
   ): Promise<void> {
     try {
       const { eventId } = request.params;
-      const query = GetEntryReceptionPreparationQuery.forEvent(eventId);
-      const preparation = await this.entryReceptionPreparationQueryHandler.execute(query);
-      const presented = presentEntryReceptionPreparation(preparation, new Date());
+      const query = GetEntryReceptionCreationDefaultsQuery.forEvent(eventId);
+      const defaults = await this.entryReceptionCreationDefaultsQueryHandler.execute(query);
+      const presented = presentEntryReceptionCreationDefaults(defaults);
 
       response.status(200).json(presented);
     } catch (error: unknown) {
