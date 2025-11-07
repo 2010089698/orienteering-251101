@@ -1,4 +1,5 @@
 import EventPeriod from '../../event/domain/EventPeriod';
+import { normalizeToDateOnly } from '../../event/domain/DateUtils';
 
 class ReceptionWindow {
   private constructor(
@@ -30,8 +31,15 @@ class ReceptionWindow {
       throw new Error('イベント期間が指定されていません。');
     }
 
-    if (!this.isBoundaryWithinPeriod(this.start, period) || !this.isBoundaryWithinPeriod(this.end, period)) {
-      throw new Error('受付期間はイベント期間内に設定してください。');
+    const eventEnd = period.endDate;
+    const normalizedStart = normalizeToDateOnly(this.start);
+
+    if (normalizedStart.getTime() > eventEnd.getTime()) {
+      throw new Error('受付開始日時はイベント終了日を超えないように設定してください。');
+    }
+
+    if (!this.isBoundaryWithinPeriod(this.end, period)) {
+      throw new Error('受付終了日時はイベント終了日までに設定してください。');
     }
   }
 
