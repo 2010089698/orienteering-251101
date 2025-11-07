@@ -113,9 +113,13 @@ const OrganizerEventDetailPage = ({
           )}
           <div>
             {detail.entryReceptionStatus === 'NOT_REGISTERED' ? (
-              <button type="button">エントリー受付を作成</button>
+              <Link to={`/events/${detail.eventId}/entry-receptions/create`}>
+                エントリー受付を作成
+              </Link>
             ) : (
-              <button type="button">エントリー受付を管理</button>
+              <Link to={`/events/${detail.eventId}/entry-receptions`}>
+                エントリー受付を管理
+              </Link>
             )}
           </div>
           <div>

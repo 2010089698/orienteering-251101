@@ -89,9 +89,16 @@ describe('OrganizerEventDetailPage', () => {
     renderWithState(state);
 
     expect(screen.getByText('このイベントは公開済みです。')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'エントリー受付を管理' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'エントリー受付を管理' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'スタートリストを管理' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '公開済みリザルトを見る' })).toBeInTheDocument();
+  });
+
+  test('エントリー受付未登録の場合に作成リンクを表示する', () => {
+    renderWithState(baseState);
+
+    const link = screen.getByRole('link', { name: 'エントリー受付を作成' });
+    expect(link).toHaveAttribute('href', '/events/EVT-001/entry-receptions/create');
   });
 
   test('未公開イベントの公開ボタンを押下できる', async () => {
