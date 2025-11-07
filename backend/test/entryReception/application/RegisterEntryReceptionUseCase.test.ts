@@ -78,6 +78,28 @@ describe('RegisterEntryReceptionUseCase', () => {
     expect(repository.saved).toHaveLength(1);
   });
 
+  it('イベント単日の任意の時刻でも受付期間を設定できる', async () => {
+    const eventDetail: EventScheduleDetail = {
+      id: 'event-1',
+      startDate: new Date('2024-05-05T00:00:00.000Z'),
+      endDate: new Date('2024-05-05T00:00:00.000Z'),
+      raceSchedules: [
+        { id: 'race-1', scheduledDate: new Date('2024-05-05T00:00:00.000Z') }
+      ]
+    };
+    const { useCase } = createUseCaseWithEvent(eventDetail);
+    const command = RegisterEntryReceptionCommand.from({
+      ...baseCommandProps,
+      receptionStart: '2024-05-05T09:00:00.000Z',
+      receptionEnd: '2024-05-05T17:30:00.000Z'
+    });
+
+    const result = await useCase.execute(command);
+
+    expect(result.receptionWindow.opensAt.toISOString()).toBe('2024-05-05T09:00:00.000Z');
+    expect(result.receptionWindow.closesAt.toISOString()).toBe('2024-05-05T17:30:00.000Z');
+  });
+
   it('イベントが存在しない場合はエラーになる', async () => {
     const { useCase } = createUseCaseWithEvent(null);
     const command = RegisterEntryReceptionCommand.from(baseCommandProps);
@@ -113,6 +135,25 @@ describe('RegisterEntryReceptionUseCase', () => {
     const command = RegisterEntryReceptionCommand.from({
       ...baseCommandProps,
       receptionStart: '2024-04-25T09:00:00.000Z'
+    });
+
+    await expect(useCase.execute(command)).rejects.toThrow('受付期間はイベント期間内に設定してください。');
+  });
+
+  it('イベント期間外の日付を含む受付期間はエラーになる', async () => {
+    const eventDetail: EventScheduleDetail = {
+      id: 'event-1',
+      startDate: new Date('2024-05-01T00:00:00.000Z'),
+      endDate: new Date('2024-05-10T00:00:00.000Z'),
+      raceSchedules: [
+        { id: 'race-1', scheduledDate: new Date('2024-05-06T00:00:00.000Z') }
+      ]
+    };
+    const { useCase } = createUseCaseWithEvent(eventDetail);
+    const command = RegisterEntryReceptionCommand.from({
+      ...baseCommandProps,
+      receptionStart: '2024-05-08T09:00:00.000Z',
+      receptionEnd: '2024-05-11T10:00:00.000Z'
     });
 
     await expect(useCase.execute(command)).rejects.toThrow('受付期間はイベント期間内に設定してください。');

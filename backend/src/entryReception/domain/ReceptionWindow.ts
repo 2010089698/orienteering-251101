@@ -30,12 +30,13 @@ class ReceptionWindow {
       throw new Error('イベント期間が指定されていません。');
     }
 
-    const eventStart = period.startDate.getTime();
-    const eventEnd = period.endDate.getTime();
-
-    if (this.start.getTime() < eventStart || this.end.getTime() > eventEnd) {
+    if (!this.isBoundaryWithinPeriod(this.start, period) || !this.isBoundaryWithinPeriod(this.end, period)) {
       throw new Error('受付期間はイベント期間内に設定してください。');
     }
+  }
+
+  private isBoundaryWithinPeriod(boundary: Date, period: EventPeriod): boolean {
+    return period.contains(boundary);
   }
 
   public get opensAt(): Date {
