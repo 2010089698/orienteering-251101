@@ -37,6 +37,49 @@ export interface PublishEventResponseDto {
   isPublic: boolean;
 }
 
+export interface EntryReceptionClassTemplateDto {
+  classId: string;
+  name: string;
+  capacity?: number | null;
+}
+
+export interface EntryReceptionRaceDefaultsDto {
+  raceId: string;
+  raceName: string;
+  defaultReceptionStart?: string | null;
+  defaultReceptionEnd?: string | null;
+  classTemplates: EntryReceptionClassTemplateDto[];
+}
+
+export interface EntryReceptionCreationDefaultsResponse {
+  eventId: string;
+  eventName: string;
+  races: EntryReceptionRaceDefaultsDto[];
+}
+
+export interface EntryReceptionClassRequestDto {
+  classId?: string;
+  name: string;
+  capacity?: number | null;
+}
+
+export interface EntryReceptionRaceRequestDto {
+  raceId: string;
+  opensAt: string;
+  closesAt: string;
+  classes: EntryReceptionClassRequestDto[];
+}
+
+export interface EntryReceptionCreateRequestDto {
+  eventId: string;
+  receptions: EntryReceptionRaceRequestDto[];
+}
+
+export interface EntryReceptionCreateResponseDto {
+  eventId: string;
+  entryReceptionId: string;
+}
+
 export class EventApiError extends Error {
   constructor(
     message: string,
@@ -301,4 +344,46 @@ export async function postPublishEvent(
   });
 
   return handleResponse<PublishEventResponseDto>(response);
+}
+
+export async function fetchEntryReceptionCreationDefaults(
+  eventId: string,
+  signal?: AbortSignal
+): Promise<EntryReceptionCreationDefaultsResponse> {
+  if (!eventId || eventId.trim().length === 0) {
+    throw new EventApiError('イベントIDを指定してください。', 400, {
+      reason: 'MISSING_EVENT_ID'
+    });
+  }
+
+  const response = await fetch(
+    buildApiUrl(`/events/${encodeURIComponent(eventId)}/entry-receptions/create`),
+    {
+      method: 'GET',
+      signal
+    }
+  );
+
+  return handleResponse<EntryReceptionCreationDefaultsResponse>(response);
+}
+
+export async function postEntryReception(
+  eventId: string,
+  dto: EntryReceptionCreateRequestDto,
+  signal?: AbortSignal
+): Promise<EntryReceptionCreateResponseDto> {
+  if (!eventId || eventId.trim().length === 0) {
+    throw new EventApiError('イベントIDを指定してください。', 400, {
+      reason: 'MISSING_EVENT_ID'
+    });
+  }
+
+  const response = await fetch(buildApiUrl(`/events/${encodeURIComponent(eventId)}/entry-receptions`), {
+    method: 'POST',
+    headers: JSON_HEADERS,
+    body: JSON.stringify(dto),
+    signal
+  });
+
+  return handleResponse<EntryReceptionCreateResponseDto>(response);
 }
