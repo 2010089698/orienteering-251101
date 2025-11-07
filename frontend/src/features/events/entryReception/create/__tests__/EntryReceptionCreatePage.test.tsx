@@ -45,7 +45,10 @@ const renderPage = (
   const createEntryReception =
     gatewayOverrides?.createEntryReception ??
     jest
-      .fn<ReturnType<EntryReceptionCreateServiceGateway['createEntryReception']>, Parameters<EntryReceptionCreateServiceGateway['createEntryReception']>>()
+      .fn<
+        ReturnType<EntryReceptionCreateServiceGateway['createEntryReception']>,
+        Parameters<EntryReceptionCreateServiceGateway['createEntryReception']>
+      >()
       .mockResolvedValue({ eventId: 'EVT-001', entryReceptionId: 'ERC-001' });
 
   const gateway: EntryReceptionCreateServiceGateway = {
@@ -116,28 +119,27 @@ describe('EntryReceptionCreatePage', () => {
 
     await user.click(screen.getByRole('button', { name: '登録完了' }));
 
-    await waitFor(() => expect(createEntryReception).toHaveBeenCalled());
+    await waitFor(() => expect(createEntryReception).toHaveBeenCalledTimes(2));
 
-    const [, requestBody] = createEntryReception.mock.calls[0];
-    expect(requestBody).toEqual({
-      eventId: 'EVT-001',
-      receptions: [
-        {
-          raceId: 'RACE-1',
-          opensAt: '2024-04-01T08:00',
-          closesAt: '2024-04-01T09:00',
-          classes: [
-            { classId: 'CLS-1', name: 'M21E', capacity: 50 },
-            { name: '新人講習', capacity: 30 }
-          ]
-        },
-        {
-          raceId: 'RACE-2',
-          opensAt: '2024-04-02T08:30',
-          closesAt: '2024-04-02T09:30',
-          classes: [{ name: 'W21A', capacity: 40 }]
-        }
+    const [firstCallEventId, firstRequest] = createEntryReception.mock.calls[0];
+    expect(firstCallEventId).toBe('EVT-001');
+    expect(firstRequest).toEqual({
+      raceId: 'RACE-1',
+      receptionStart: '2024-04-01T08:00',
+      receptionEnd: '2024-04-01T09:00',
+      entryClasses: [
+        { classId: 'CLS-1', name: 'M21E', capacity: 50 },
+        { name: '新人講習', capacity: 30 }
       ]
+    });
+
+    const [secondCallEventId, secondRequest] = createEntryReception.mock.calls[1];
+    expect(secondCallEventId).toBe('EVT-001');
+    expect(secondRequest).toEqual({
+      raceId: 'RACE-2',
+      receptionStart: '2024-04-02T08:30',
+      receptionEnd: '2024-04-02T09:30',
+      entryClasses: [{ name: 'W21A', capacity: 40 }]
     });
 
     await waitFor(() => expect(screen.getByText('ダミーイベント詳細')).toBeInTheDocument());
@@ -145,8 +147,13 @@ describe('EntryReceptionCreatePage', () => {
 
   test('APIバリデーションエラー時にメッセージを表示する', async () => {
     const createEntryReception = jest
-      .fn<ReturnType<EntryReceptionCreateServiceGateway['createEntryReception']>, Parameters<EntryReceptionCreateServiceGateway['createEntryReception']>>()
-      .mockRejectedValue(new EventApiError('validation failed', 422, { message: '入力内容を確認してください。' }));
+      .fn<
+        ReturnType<EntryReceptionCreateServiceGateway['createEntryReception']>,
+        Parameters<EntryReceptionCreateServiceGateway['createEntryReception']>
+      >()
+      .mockRejectedValue(
+        new EventApiError('validation failed', 422, { message: '入力内容を確認してください。' })
+      );
 
     renderPage({ createEntryReception });
     const user = userEvent.setup();
@@ -163,7 +170,10 @@ describe('EntryReceptionCreatePage', () => {
 
   test('APIエラー時に共通エラーメッセージを表示する', async () => {
     const createEntryReception = jest
-      .fn<ReturnType<EntryReceptionCreateServiceGateway['createEntryReception']>, Parameters<EntryReceptionCreateServiceGateway['createEntryReception']>>()
+      .fn<
+        ReturnType<EntryReceptionCreateServiceGateway['createEntryReception']>,
+        Parameters<EntryReceptionCreateServiceGateway['createEntryReception']>
+      >()
       .mockRejectedValue(new EventApiError('サーバーエラー', 500));
 
     renderPage({ createEntryReception });
@@ -194,6 +204,44 @@ describe('EntryReceptionCreatePage', () => {
 
     await waitFor(() => expect(fetchDefaults).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(screen.getByText('対象イベント: 春の大会')).toBeInTheDocument());
+  });
+});
+
+describe('EntryReceptionCreatePage sequential submission', () => {
+  function createDeferred<T>() {
+    let resolve!: (value: T | PromiseLike<T>) => void;
+    let reject!: (reason?: unknown) => void;
+    const promise = new Promise<T>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+
+    return { promise, resolve, reject };
+  }
+
+  test('複数レースの受付登録を逐次実行する', async () => {
+    const firstCall = createDeferred<{ eventId: string; entryReceptionId: string }>();
+    const createEntryReception = jest
+      .fn<
+        ReturnType<EntryReceptionCreateServiceGateway['createEntryReception']>,
+        Parameters<EntryReceptionCreateServiceGateway['createEntryReception']>
+      >()
+      .mockImplementationOnce(() => firstCall.promise)
+      .mockImplementationOnce(() => Promise.resolve({ eventId: 'EVT-001', entryReceptionId: 'ERC-002' }));
+
+    renderPage({ createEntryReception });
+    const user = userEvent.setup();
+
+    await screen.findByText('対象イベント: 春の大会');
+    await fillRequiredClassFields(user);
+
+    await user.click(screen.getByRole('button', { name: '登録完了' }));
+
+    await waitFor(() => expect(createEntryReception).toHaveBeenCalledTimes(1));
+
+    firstCall.resolve({ eventId: 'EVT-001', entryReceptionId: 'ERC-001' });
+
+    await waitFor(() => expect(createEntryReception).toHaveBeenCalledTimes(2));
   });
 });
 

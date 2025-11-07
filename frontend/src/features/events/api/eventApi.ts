@@ -17,6 +17,7 @@ import {
   type EntryReceptionRaceDefaults as EntryReceptionRaceDefaultsContract,
   type EntryReceptionClassTemplate as EntryReceptionClassTemplateContract
 } from '@shared/event/contracts/EntryReceptionCreationDefaultsContract';
+import type { RegisterEntryReceptionRequest } from '@shared/event/contracts/EntryReceptionCreateContract';
 
 export interface EventCreationDefaultsResponse {
   dateFormat: string;
@@ -49,23 +50,12 @@ export type EntryReceptionRaceDefaultsDto = EntryReceptionRaceDefaultsContract;
 
 export type EntryReceptionCreationDefaultsResponse = EntryReceptionCreationDefaultsContractResponse;
 
-export interface EntryReceptionClassRequestDto {
-  classId?: string;
-  name: string;
-  capacity?: number | null;
-}
-
-export interface EntryReceptionRaceRequestDto {
-  raceId: string;
-  opensAt: string;
-  closesAt: string;
-  classes: EntryReceptionClassRequestDto[];
-}
-
-export interface EntryReceptionCreateRequestDto {
-  eventId: string;
-  receptions: EntryReceptionRaceRequestDto[];
-}
+export type RegisterEntryReceptionRequestDto =
+  Omit<RegisterEntryReceptionRequest, 'entryClasses'> & {
+    entryClasses: (RegisterEntryReceptionRequest['entryClasses'][number] & {
+      classId?: string;
+    })[];
+  };
 
 export interface EntryReceptionCreateResponseDto {
   eventId: string;
@@ -367,7 +357,7 @@ export async function fetchEntryReceptionCreationDefaults(
 
 export async function postEntryReception(
   eventId: string,
-  dto: EntryReceptionCreateRequestDto,
+  dto: RegisterEntryReceptionRequestDto,
   signal?: AbortSignal
 ): Promise<EntryReceptionCreateResponseDto> {
   if (!eventId || eventId.trim().length === 0) {
