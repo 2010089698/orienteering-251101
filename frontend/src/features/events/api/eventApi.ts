@@ -50,12 +50,7 @@ export type EntryReceptionRaceDefaultsDto = EntryReceptionRaceDefaultsContract;
 
 export type EntryReceptionCreationDefaultsResponse = EntryReceptionCreationDefaultsContractResponse;
 
-export type RegisterEntryReceptionRequestDto =
-  Omit<RegisterEntryReceptionRequest, 'entryClasses'> & {
-    entryClasses: (RegisterEntryReceptionRequest['entryClasses'][number] & {
-      classId?: string;
-    })[];
-  };
+export type RegisterEntryReceptionRequestDto = RegisterEntryReceptionRequest;
 
 export interface EntryReceptionCreateResponseDto {
   eventId: string;
