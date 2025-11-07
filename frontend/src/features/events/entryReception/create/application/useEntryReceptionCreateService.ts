@@ -13,11 +13,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 
 import {
   EventApiError,
-  EntryReceptionClassRequestDto,
-  EntryReceptionCreateRequestDto,
   EntryReceptionCreateResponseDto,
   EntryReceptionCreationDefaultsResponse,
   EntryReceptionRaceDefaultsDto,
+  RegisterEntryReceptionRequestDto,
   fetchEntryReceptionCreationDefaults,
   postEntryReception
 } from '../../../api/eventApi';
@@ -85,7 +84,7 @@ export interface EntryReceptionCreateServiceGateway {
   ) => Promise<EntryReceptionCreationDefaultsResponse>;
   createEntryReception: (
     eventId: string,
-    dto: EntryReceptionCreateRequestDto,
+    dto: RegisterEntryReceptionRequestDto,
     signal?: AbortSignal
   ) => Promise<EntryReceptionCreateResponseDto>;
 }
@@ -157,39 +156,32 @@ function createEmptyClassFormValue(
   };
 }
 
-function buildRequest(
-  eventId: string,
-  values: EntryReceptionCreateFormValues
-): EntryReceptionCreateRequestDto {
-  const classesByRace = values.classes.reduce<Record<string, EntryReceptionClassRequestDto[]>>(
-    (acc, current) => {
-      const normalized: EntryReceptionClassRequestDto = {
-        classId: current.classId?.trim() || undefined,
-        name: current.name,
-        capacity: parseCapacity(current.capacity)
-      };
-      const key = current.raceId;
-      if (!acc[key]) {
-        acc[key] = [];
-      }
-      acc[key].push(normalized);
-      return acc;
-    },
-    {}
-  );
+function buildRequests(values: EntryReceptionCreateFormValues): RegisterEntryReceptionRequestDto[] {
+  const classesByRace = values.classes.reduce<
+    Record<string, RegisterEntryReceptionRequestDto['entryClasses']>
+  >((acc, current) => {
+    const normalized: RegisterEntryReceptionRequestDto['entryClasses'][number] = {
+      classId: current.classId?.trim() || undefined,
+      name: current.name,
+      capacity: parseCapacity(current.capacity)
+    };
+    const key = current.raceId;
+    if (!acc[key]) {
+      acc[key] = [];
+    }
+    acc[key].push(normalized);
+    return acc;
+  }, {});
 
-  return {
-    eventId,
-    receptions: values.receptions.map((race) => ({
-      raceId: race.raceId,
-      opensAt: race.opensAt,
-      closesAt: race.closesAt,
-      classes: classesByRace[race.raceId] ?? []
-    }))
-  };
+  return values.receptions.map((race) => ({
+    raceId: race.raceId,
+    receptionStart: race.opensAt,
+    receptionEnd: race.closesAt,
+    entryClasses: classesByRace[race.raceId] ?? []
+  }));
 }
 
-function parseCapacity(raw: string): number | null | undefined {
+function parseCapacity(raw: string): number | undefined {
   const trimmed = raw.trim();
   if (trimmed.length === 0) {
     return undefined;
@@ -327,8 +319,10 @@ export const useEntryReceptionCreateService = (
     setSubmitError(null);
 
     try {
-      const request = buildRequest(options.eventId, values);
-      await gateway.createEntryReception(options.eventId, request);
+      const requests = buildRequests(values);
+      for (const request of requests) {
+        await gateway.createEntryReception(options.eventId, request);
+      }
       onSuccessRef.current?.();
     } catch (error) {
       setSubmitError(formatSubmitError(error));
