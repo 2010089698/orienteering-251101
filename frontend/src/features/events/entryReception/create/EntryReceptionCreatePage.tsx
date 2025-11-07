@@ -122,6 +122,14 @@ const EntryReceptionCreatePage = ({
                           return (
                             <li key={field.id}>
                               <label>
+                                クラスID
+                                <input
+                                  type="text"
+                                  {...register(`classes.${index}.classId` as const)}
+                                />
+                              </label>
+                              {classError?.classId && <p role="alert">{classError.classId.message}</p>}
+                              <label>
                                 クラス名
                                 <input
                                   type="text"

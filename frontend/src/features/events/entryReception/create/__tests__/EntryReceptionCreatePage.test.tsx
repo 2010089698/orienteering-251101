@@ -81,7 +81,9 @@ async function fillRequiredClassFields(user: ReturnType<typeof userEvent.setup>)
   const secondRaceRegion = await screen.findByRole('region', {
     name: 'Day2 Middleの受付設定'
   });
+  const secondRaceClassId = within(secondRaceRegion).getByLabelText('クラスID');
   const secondRaceClassName = within(secondRaceRegion).getByLabelText('クラス名');
+  await user.type(secondRaceClassId, 'CLS-2');
   await user.type(secondRaceClassName, 'W21A');
 }
 
@@ -99,9 +101,14 @@ describe('EntryReceptionCreatePage', () => {
       name: 'Day2 Middleの受付設定'
     });
 
-    const firstRaceClassInputs = within(firstRaceRegion).getAllByLabelText('クラス名');
-    expect(firstRaceClassInputs[0]).toHaveValue('M21E');
+    const firstRaceClassIdInputs = within(firstRaceRegion).getAllByLabelText('クラスID');
+    expect(firstRaceClassIdInputs[0]).toHaveValue('CLS-1');
 
+    const firstRaceClassNameInputs = within(firstRaceRegion).getAllByLabelText('クラス名');
+    expect(firstRaceClassNameInputs[0]).toHaveValue('M21E');
+
+    const secondRaceClassId = within(secondRaceRegion).getByLabelText('クラスID');
+    await user.type(secondRaceClassId, 'CLS-2');
     const secondRaceClassName = within(secondRaceRegion).getByLabelText('クラス名');
     await user.type(secondRaceClassName, 'W21A');
     const secondRaceCapacity = within(secondRaceRegion).getByLabelText('定員');
@@ -110,9 +117,13 @@ describe('EntryReceptionCreatePage', () => {
     const addClassButton = within(firstRaceRegion).getByRole('button', { name: 'クラスを追加' });
     await user.click(addClassButton);
 
-    const updatedClassInputs = within(firstRaceRegion).getAllByLabelText('クラス名');
-    const newClassInput = updatedClassInputs[updatedClassInputs.length - 1];
-    await user.type(newClassInput, '新人講習');
+    const updatedClassIdInputs = within(firstRaceRegion).getAllByLabelText('クラスID');
+    const newClassIdInput = updatedClassIdInputs[updatedClassIdInputs.length - 1];
+    await user.type(newClassIdInput, 'CLS-NEW');
+
+    const updatedClassNameInputs = within(firstRaceRegion).getAllByLabelText('クラス名');
+    const newClassNameInput = updatedClassNameInputs[updatedClassNameInputs.length - 1];
+    await user.type(newClassNameInput, '新人講習');
 
     const updatedCapacityInputs = within(firstRaceRegion).getAllByLabelText('定員');
     await user.type(updatedCapacityInputs[updatedCapacityInputs.length - 1], '30');
@@ -129,7 +140,7 @@ describe('EntryReceptionCreatePage', () => {
       receptionEnd: '2024-04-01T09:00',
       entryClasses: [
         { classId: 'CLS-1', name: 'M21E', capacity: 50 },
-        { name: '新人講習', capacity: 30 }
+        { classId: 'CLS-NEW', name: '新人講習', capacity: 30 }
       ]
     });
 
@@ -139,10 +150,31 @@ describe('EntryReceptionCreatePage', () => {
       raceId: 'RACE-2',
       receptionStart: '2024-04-02T08:30',
       receptionEnd: '2024-04-02T09:30',
-      entryClasses: [{ name: 'W21A', capacity: 40 }]
+      entryClasses: [{ classId: 'CLS-2', name: 'W21A', capacity: 40 }]
     });
 
     await waitFor(() => expect(screen.getByText('ダミーイベント詳細')).toBeInTheDocument());
+  });
+
+  test('クラスID未入力の場合はエラーを表示し送信しない', async () => {
+    const { createEntryReception } = renderPage();
+    const user = userEvent.setup();
+
+    await screen.findByText('対象イベント: 春の大会');
+
+    const secondRaceRegion = screen.getByRole('region', {
+      name: 'Day2 Middleの受付設定'
+    });
+
+    const secondRaceClassName = within(secondRaceRegion).getByLabelText('クラス名');
+    await user.type(secondRaceClassName, 'W21A');
+
+    await user.click(screen.getByRole('button', { name: '登録完了' }));
+
+    await waitFor(() =>
+      expect(within(secondRaceRegion).getByText('クラスIDを入力してください。')).toBeInTheDocument()
+    );
+    expect(createEntryReception).not.toHaveBeenCalled();
   });
 
   test('APIバリデーションエラー時にメッセージを表示する', async () => {

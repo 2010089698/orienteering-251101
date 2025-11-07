@@ -27,6 +27,11 @@ const DEFAULT_DEFAULTS: EntryReceptionCreationDefaultsResponse = {
   races: []
 };
 
+const classIdSchema = z
+  .string()
+  .transform((value) => value.trim())
+  .refine((value) => value.length > 0, 'クラスIDを入力してください。');
+
 const classCapacitySchema = z
   .string()
   .transform((value) => value.trim())
@@ -47,7 +52,7 @@ const entryReceptionCreateSchema = z
     classes: z.array(
       z.object({
         raceId: z.string().min(1),
-        classId: z.string().optional(),
+        classId: classIdSchema,
         name: z.string().min(1, 'クラス名を入力してください。'),
         capacity: classCapacitySchema
       })
@@ -150,7 +155,7 @@ function createEmptyClassFormValue(
 ): EntryReceptionCreateFormValues['classes'][number] {
   return {
     raceId,
-    classId: undefined,
+    classId: '',
     name: '',
     capacity: ''
   };
@@ -161,7 +166,7 @@ function buildRequests(values: EntryReceptionCreateFormValues): RegisterEntryRec
     Record<string, RegisterEntryReceptionRequestDto['entryClasses']>
   >((acc, current) => {
     const normalized: RegisterEntryReceptionRequestDto['entryClasses'][number] = {
-      classId: current.classId?.trim() || undefined,
+      classId: current.classId.trim(),
       name: current.name,
       capacity: parseCapacity(current.capacity)
     };
