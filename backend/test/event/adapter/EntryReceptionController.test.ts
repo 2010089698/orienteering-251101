@@ -119,6 +119,7 @@ describe('EntryReceptionController', () => {
     expect(response.body).toEqual({
       eventId,
       eventName: 'エントリー受付テスト大会',
+      eventEndDate: eventEnd.toISOString(),
       races: [
         {
           raceId: 'long',
@@ -158,6 +159,7 @@ describe('EntryReceptionController', () => {
     expect(defaultsResponse.body).toEqual({
       eventId,
       eventName: 'エントリー受付テスト大会',
+      eventEndDate: eventEnd.toISOString(),
       races: [
         {
           raceId,

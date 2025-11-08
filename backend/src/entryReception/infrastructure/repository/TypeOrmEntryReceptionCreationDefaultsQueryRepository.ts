@@ -59,6 +59,7 @@ export class TypeOrmEntryReceptionCreationDefaultsQueryRepository
     return {
       eventId: event.id,
       eventName: event.name,
+      eventEndDate: event.endDate,
       races
     } satisfies EntryReceptionCreationDefaultsResponseDto;
   }
