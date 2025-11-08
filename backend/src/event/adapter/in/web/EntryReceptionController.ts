@@ -120,11 +120,16 @@ interface PresentedEntryReceptionRaceDefaults {
 interface PresentedEntryReceptionCreationDefaultsResponse {
   readonly eventId: string;
   readonly eventName: string;
+  readonly eventEndDate: string;
   readonly races: ReadonlyArray<PresentedEntryReceptionRaceDefaults>;
 }
 
 function formatOptionalDate(value?: Date): string | undefined {
   return value ? value.toISOString() : undefined;
+}
+
+function formatDate(value: Date): string {
+  return value.toISOString();
 }
 
 function presentEntryReceptionPreparation(
@@ -171,6 +176,7 @@ function presentEntryReceptionCreationDefaults(
   return {
     eventId: defaults.eventId,
     eventName: defaults.eventName,
+    eventEndDate: formatDate(defaults.eventEndDate),
     races
   };
 }

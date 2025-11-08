@@ -9,6 +9,13 @@ function createRequiredStringSchema(requiredMessage: string): z.ZodString {
   return z.string({ required_error: requiredMessage }).min(1, requiredMessage);
 }
 
+function createRequiredIsoDateTimeSchema(requiredMessage: string): z.ZodString {
+  return z
+    .string({ required_error: requiredMessage })
+    .min(1, requiredMessage)
+    .refine(isIsoDateTime, { message: '日時はISO8601形式で指定してください。' });
+}
+
 const optionalIsoDateTimeSchema = z
   .string()
   .refine(isIsoDateTime, { message: '日時はISO8601形式で指定してください。' })
@@ -39,6 +46,7 @@ export type EntryReceptionRaceDefaults = z.infer<typeof entryReceptionRaceDefaul
 export const entryReceptionCreationDefaultsResponseSchema = z.object({
   eventId: createRequiredStringSchema('イベントIDは必須です。'),
   eventName: createRequiredStringSchema('イベント名は必須です。'),
+  eventEndDate: createRequiredIsoDateTimeSchema('イベント終了日は必須です。'),
   races: z.array(entryReceptionRaceDefaultsSchema)
 });
 

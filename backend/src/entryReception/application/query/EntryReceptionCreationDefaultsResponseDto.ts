@@ -15,6 +15,7 @@ export interface EntryReceptionRaceDefaultsDto {
 interface EntryReceptionCreationDefaultsResponseDto {
   readonly eventId: string;
   readonly eventName: string;
+  readonly eventEndDate: Date;
   readonly races: ReadonlyArray<EntryReceptionRaceDefaultsDto>;
 }
 
