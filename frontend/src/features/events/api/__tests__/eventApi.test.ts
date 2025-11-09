@@ -4,7 +4,8 @@ import {
   EventApiError,
   fetchOrganizerEvents,
   fetchOrganizerEventDetail,
-  postPublishEvent
+  postPublishEvent,
+  fetchPublicEventDetail
 } from '../eventApi';
 import type { CreateEventRequest } from '@shared/event/contracts/CreateEventContract';
 
@@ -169,6 +170,40 @@ describe('eventApi handleResponse', () => {
     global.fetch = jest.fn().mockResolvedValue(response);
 
     await expect(fetchOrganizerEventDetail('EVT-001')).resolves.toEqual(payload);
+  });
+
+  test('公開イベント詳細APIが契約に反するレスポンスを返した場合は例外を投げる', async () => {
+    const response = new Response(JSON.stringify({ invalid: true }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+    global.fetch = jest.fn().mockResolvedValue(response);
+
+    await expect(fetchPublicEventDetail('event-1')).rejects.toBeInstanceOf(EventApiError);
+  });
+
+  test('公開イベント詳細APIが妥当なレスポンスを返した場合は解析結果を返す', async () => {
+    const payload = {
+      eventId: 'EVT-010',
+      eventName: '公開大会',
+      startDate: '2024-06-01',
+      endDate: '2024-06-02',
+      isMultiDayEvent: true,
+      isMultiRaceEvent: false,
+      raceSchedules: [
+        { name: 'Day1', date: '2024-06-01' }
+      ],
+      entryReceptionStatus: 'OPEN',
+      startListStatus: 'PUBLISHED',
+      resultPublicationStatus: 'PUBLISHED'
+    } as const;
+    const response = new Response(JSON.stringify(payload), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+    global.fetch = jest.fn().mockResolvedValue(response);
+
+    await expect(fetchPublicEventDetail('EVT-010')).resolves.toEqual(payload);
   });
 
   test('公開APIはイベントIDが未指定の場合にエラーを投げる', async () => {
