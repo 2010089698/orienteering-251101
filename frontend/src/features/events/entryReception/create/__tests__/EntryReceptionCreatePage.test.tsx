@@ -1,5 +1,5 @@
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import EntryReceptionCreatePage from '../EntryReceptionCreatePage';
@@ -14,6 +14,7 @@ import type { EntryReceptionCreationDefaultsResponse } from '@shared/event/contr
 const DEFAULT_GATEWAY_RESPONSE: EntryReceptionCreationDefaultsResponse = {
   eventId: 'EVT-001',
   eventName: '春の大会',
+  eventEndDate: '2024-04-02T12:00',
   races: [
     {
       raceId: 'RACE-1',
@@ -173,6 +174,36 @@ describe('EntryReceptionCreatePage', () => {
 
     await waitFor(() =>
       expect(within(secondRaceRegion).getByText('クラスIDを入力してください。')).toBeInTheDocument()
+    );
+    expect(createEntryReception).not.toHaveBeenCalled();
+  });
+
+  test('受付終了日時がイベント終了日時を超えるとエラーになる', async () => {
+    const { createEntryReception } = renderPage();
+    const user = userEvent.setup();
+
+    await screen.findByText('対象イベント: 春の大会');
+
+    const secondRaceRegion = screen.getByRole('region', {
+      name: 'Day2 Middleの受付設定'
+    });
+
+    const secondRaceClosing = within(secondRaceRegion).getByLabelText('受付終了');
+    // max属性が存在するとブラウザが値変更を拒否するためテストでは除去する。
+    secondRaceClosing.removeAttribute('max');
+    fireEvent.change(secondRaceClosing, {
+      target: { value: '2024-04-02T12:30', name: 'receptions.1.closesAt' }
+    });
+    expect(secondRaceClosing).toHaveValue('2024-04-02T12:30');
+
+    await fillRequiredClassFields(user);
+
+    await user.click(screen.getByRole('button', { name: '登録完了' }));
+
+    await waitFor(() =>
+      expect(
+        within(secondRaceRegion).getByText('受付終了日時はイベント終了日時以前を指定してください。')
+      ).toBeInTheDocument()
     );
     expect(createEntryReception).not.toHaveBeenCalled();
   });

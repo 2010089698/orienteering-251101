@@ -24,6 +24,7 @@ import {
 const DEFAULT_DEFAULTS: EntryReceptionCreationDefaultsResponse = {
   eventId: '',
   eventName: '',
+  eventEndDate: '',
   races: []
 };
 
@@ -111,6 +112,7 @@ export interface EntryReceptionCreateServiceState {
   loadError: string | null;
   submitError: string | null;
   eventName: string;
+  eventEnd: string;
   receptions: UseFieldArrayReturn<EntryReceptionCreateFormValues, 'receptions'>['fields'];
   classes: UseFieldArrayReturn<EntryReceptionCreateFormValues, 'classes'>['fields'];
   getClassesByRace: (raceId: string) => EntryReceptionClassViewModel[];
@@ -225,6 +227,7 @@ function normalizeDefaults(
   return {
     eventId: defaults.eventId ?? '',
     eventName: defaults.eventName ?? '',
+    eventEndDate: defaults.eventEndDate ?? '',
     races: Array.isArray(defaults.races)
       ? defaults.races.map((race): EntryReceptionRaceDefaultsDto => ({
           raceId: race.raceId,
@@ -254,6 +257,7 @@ export const useEntryReceptionCreateService = (
   }, [options.onSuccess]);
 
   const [eventName, setEventName] = useState('');
+  const [eventEnd, setEventEnd] = useState('');
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -262,6 +266,8 @@ export const useEntryReceptionCreateService = (
     control,
     register,
     handleSubmit,
+    setError,
+    clearErrors,
     formState: { errors, isSubmitting },
     reset
   } = useForm<EntryReceptionCreateFormValues>({
@@ -294,12 +300,14 @@ export const useEntryReceptionCreateService = (
         const normalized = normalizeDefaults(response);
         const formValues = mapDefaultsToFormValues(normalized);
         setEventName(normalized.eventName);
+        setEventEnd(normalized.eventEndDate);
         reset(formValues, { keepDefaultValues: false });
       } catch (error) {
         if (signal?.aborted) {
           return;
         }
         setEventName('');
+        setEventEnd('');
         setLoadError('エントリー受付の初期設定取得に失敗しました。');
       } finally {
         if (signal?.aborted) {
@@ -322,6 +330,35 @@ export const useEntryReceptionCreateService = (
 
   const onSubmit = handleSubmit(async (values) => {
     setSubmitError(null);
+    clearErrors('receptions');
+
+    const eventEndTimestamp = eventEnd ? new Date(eventEnd).getTime() : NaN;
+    const isEventEndDefined = Number.isFinite(eventEndTimestamp);
+    if (isEventEndDefined) {
+      let hasEventEndError = false;
+      let firstErrorSet = false;
+
+      values.receptions.forEach((reception, index) => {
+        if (!reception.closesAt) {
+          return;
+        }
+
+        const closesAtTimestamp = new Date(reception.closesAt).getTime();
+        if (Number.isFinite(closesAtTimestamp) && closesAtTimestamp > eventEndTimestamp) {
+          hasEventEndError = true;
+          const fieldName: `receptions.${number}.closesAt` = `receptions.${index}.closesAt`;
+          setError(fieldName, {
+            type: 'validate',
+            message: '受付終了日時はイベント終了日時以前を指定してください。'
+          }, { shouldFocus: !firstErrorSet });
+          firstErrorSet = true;
+        }
+      });
+
+      if (hasEventEndError) {
+        return;
+      }
+    }
 
     try {
       const requests = buildRequests(values);
@@ -374,6 +411,7 @@ export const useEntryReceptionCreateService = (
     loadError,
     submitError,
     eventName,
+    eventEnd,
     receptions: receptionsFieldArray.fields,
     classes: classesFieldArray.fields,
     getClassesByRace,

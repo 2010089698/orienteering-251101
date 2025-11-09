@@ -38,6 +38,7 @@ const EntryReceptionCreatePage = ({
     loadError,
     submitError,
     eventName,
+    eventEnd,
     receptions,
     getClassesByRace,
     onAddClass,
@@ -67,6 +68,9 @@ const EntryReceptionCreatePage = ({
       <Link to={`/events/${eventId}`}>イベント詳細に戻る</Link>
       <h1 id={headingId}>エントリー受付設定</h1>
       {eventName && <p aria-live="polite">対象イベント: {eventName}</p>}
+      {eventEnd && (
+        <p aria-live="polite">受付終了日時の上限: {eventEnd}</p>
+      )}
       {loading && (
         <p role="status" aria-live="polite">
           読み込み中...
@@ -106,6 +110,7 @@ const EntryReceptionCreatePage = ({
                       受付終了
                       <input
                         type="datetime-local"
+                        max={eventEnd || undefined}
                         {...register(`receptions.${raceIndex}.closesAt` as const)}
                       />
                     </label>
