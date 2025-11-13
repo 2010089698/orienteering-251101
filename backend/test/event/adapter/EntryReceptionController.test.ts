@@ -92,6 +92,72 @@ describe('EntryReceptionController', () => {
     }
   }
 
+  it('GET /events/:eventId/entry-receptions が受付準備情報を返す', async () => {
+    const eventId = 'event-entry-preparation';
+    const now = new Date();
+    const eventStart = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const eventEnd = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    await seedEventWithRaces(eventId, 'エントリー受付準備テスト大会', eventStart, eventEnd, [
+      { raceId: 'long', scheduledDate: new Date(now.getTime() + 3 * 60 * 60 * 1000) },
+      { raceId: 'sprint', scheduledDate: new Date(now.getTime() + 4 * 60 * 60 * 1000) }
+    ]);
+
+    const openReceptionStart = new Date(now.getTime() - 60 * 60 * 1000);
+    const openReceptionEnd = new Date(now.getTime() + 60 * 60 * 1000);
+    await seedEntryReception(eventId, 'long', openReceptionStart, openReceptionEnd, [
+      { classId: 'class-1', name: '男子エリート', capacity: 50 },
+      { classId: 'class-2', name: '女子エリート' }
+    ]);
+
+    const closedReceptionStart = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+    const closedReceptionEnd = new Date(now.getTime() - 3 * 60 * 60 * 1000);
+    await seedEntryReception(eventId, 'sprint', closedReceptionStart, closedReceptionEnd, [
+      { classId: 'class-3', name: '男子ジュニア' }
+    ]);
+
+    const response = await request(app).get(`/events/${eventId}/entry-receptions`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      eventId,
+      entryReceptionStatus: 'OPEN',
+      raceReceptions: [
+        {
+          raceId: 'long',
+          receptionStart: openReceptionStart.toISOString(),
+          receptionEnd: openReceptionEnd.toISOString(),
+          entryClasses: [
+            { classId: 'class-1', name: '男子エリート', capacity: 50 },
+            { classId: 'class-2', name: '女子エリート' }
+          ]
+        },
+        {
+          raceId: 'sprint',
+          receptionStart: closedReceptionStart.toISOString(),
+          receptionEnd: closedReceptionEnd.toISOString(),
+          entryClasses: [{ classId: 'class-3', name: '男子ジュニア' }]
+        }
+      ]
+    });
+  });
+
+  it('GET /events/:eventId/entry-receptions 受付情報が未登録の場合に404を返す', async () => {
+    const eventId = 'event-entry-preparation-not-found';
+    const now = new Date();
+    const eventStart = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const eventEnd = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    await seedEventWithRaces(eventId, 'エントリー受付準備テスト大会', eventStart, eventEnd, [
+      { raceId: 'long', scheduledDate: new Date(now.getTime() + 3 * 60 * 60 * 1000) }
+    ]);
+
+    const response = await request(app).get(`/events/${eventId}/entry-receptions`);
+
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({
+      message: '指定されたイベントのエントリー受付情報が見つかりません。'
+    });
+  });
+
   it('GET /events/:eventId/entry-receptions/create がイベント情報と初期値を返す', async () => {
     const eventId = 'event-entry-defaults';
     const now = new Date();

@@ -191,6 +191,10 @@ export class EntryReceptionController {
   ) {
     this.router = Router();
     this.router.get(
+      '/events/:eventId/entry-receptions',
+      this.handleGetEntryReceptionPreparation.bind(this)
+    );
+    this.router.get(
       '/events/:eventId/entry-receptions/create',
       this.handleGetEntryReceptionCreationDefaults.bind(this)
     );
@@ -198,6 +202,28 @@ export class EntryReceptionController {
       '/events/:eventId/entry-receptions',
       this.handleRegisterEntryReception.bind(this)
     );
+  }
+
+  private async handleGetEntryReceptionPreparation(
+    request: Request,
+    response: Response
+  ): Promise<void> {
+    try {
+      const { eventId } = request.params;
+      const query = GetEntryReceptionPreparationQuery.forEvent(eventId);
+      const preparation = await this.entryReceptionPreparationQueryHandler.execute(query);
+      const presented = presentEntryReceptionPreparation(preparation, new Date());
+
+      response.status(200).json(presented);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        const status = error.message === 'イベントIDを指定してください。' ? 400 : 404;
+        response.status(status).json({ message: error.message });
+        return;
+      }
+
+      response.status(500).json({ message: '不明なエラーが発生しました。' });
+    }
   }
 
   private async handleGetEntryReceptionCreationDefaults(
