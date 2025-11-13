@@ -14,7 +14,7 @@ export class GetEntryReceptionPreparationQueryHandler {
       query.eventId
     );
 
-    if (!preparation) {
+    if (!preparation || preparation.raceReceptions.length === 0) {
       throw new Error('指定されたイベントのエントリー受付情報が見つかりません。');
     }
 
