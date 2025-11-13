@@ -4,7 +4,8 @@ import {
   EventApiError,
   fetchOrganizerEvents,
   fetchOrganizerEventDetail,
-  postPublishEvent
+  postPublishEvent,
+  fetchEntryReceptionPreparation
 } from '../eventApi';
 import type { CreateEventRequest } from '@shared/event/contracts/CreateEventContract';
 
@@ -184,5 +185,39 @@ describe('eventApi handleResponse', () => {
     global.fetch = jest.fn().mockResolvedValue(response);
 
     await expect(postPublishEvent('EVT-002')).resolves.toEqual(payload);
+  });
+
+  test('エントリー受付情報APIが妥当なレスポンスを返した場合は解析結果を返す', async () => {
+    const payload = {
+      eventId: 'EVT-003',
+      entryReceptionStatus: 'NOT_REGISTERED',
+      raceReceptions: [
+        {
+          raceId: 'RACE-001',
+          receptionStart: '2024-05-01T10:00:00+09:00',
+          receptionEnd: '2024-05-10T18:00:00+09:00',
+          entryClasses: [
+            { classId: 'CLASS-001', name: '一般', capacity: 100 }
+          ]
+        }
+      ]
+    } as const;
+    const response = new Response(JSON.stringify(payload), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+    global.fetch = jest.fn().mockResolvedValue(response);
+
+    await expect(fetchEntryReceptionPreparation('EVT-003')).resolves.toEqual(payload);
+  });
+
+  test('エントリー受付情報APIが契約に反するレスポンスを返した場合は例外を投げる', async () => {
+    const response = new Response(JSON.stringify({ invalid: true }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+    global.fetch = jest.fn().mockResolvedValue(response);
+
+    await expect(fetchEntryReceptionPreparation('EVT-004')).rejects.toBeInstanceOf(EventApiError);
   });
 });

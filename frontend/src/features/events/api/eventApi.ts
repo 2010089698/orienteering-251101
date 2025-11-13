@@ -17,7 +17,11 @@ import {
   type EntryReceptionRaceDefaults as EntryReceptionRaceDefaultsContract,
   type EntryReceptionClassTemplate as EntryReceptionClassTemplateContract
 } from '@shared/event/contracts/EntryReceptionCreationDefaultsContract';
-import type { RegisterEntryReceptionRequest } from '@shared/event/contracts/EntryReceptionCreateContract';
+import {
+  entryReceptionPreparationResponseSchema,
+  type EntryReceptionPreparationResponse as EntryReceptionPreparationContractResponse,
+  type RegisterEntryReceptionRequest
+} from '@shared/event/contracts/EntryReceptionCreateContract';
 
 export interface EventCreationDefaultsResponse {
   dateFormat: string;
@@ -49,6 +53,8 @@ export type EntryReceptionClassTemplateDto = EntryReceptionClassTemplateContract
 export type EntryReceptionRaceDefaultsDto = EntryReceptionRaceDefaultsContract;
 
 export type EntryReceptionCreationDefaultsResponse = EntryReceptionCreationDefaultsContractResponse;
+
+export type EntryReceptionPreparationResponse = EntryReceptionPreparationContractResponse;
 
 export type RegisterEntryReceptionRequestDto = RegisterEntryReceptionRequest;
 
@@ -347,6 +353,30 @@ export async function fetchEntryReceptionCreationDefaults(
     return entryReceptionCreationDefaultsResponseSchema.parse(payload);
   } catch (error) {
     throw new EventApiError('エントリー受付初期値のレスポンス解析に失敗しました。', response.status, error);
+  }
+}
+
+export async function fetchEntryReceptionPreparation(
+  eventId: string,
+  signal?: AbortSignal
+): Promise<EntryReceptionPreparationResponse> {
+  if (!eventId || eventId.trim().length === 0) {
+    throw new EventApiError('イベントIDを指定してください。', 400, {
+      reason: 'MISSING_EVENT_ID'
+    });
+  }
+
+  const response = await fetch(buildApiUrl(`/events/${encodeURIComponent(eventId)}/entry-receptions`), {
+    method: 'GET',
+    signal
+  });
+
+  const payload = await handleResponse<unknown>(response);
+
+  try {
+    return entryReceptionPreparationResponseSchema.parse(payload);
+  } catch (error) {
+    throw new EventApiError('エントリー受付情報のレスポンス解析に失敗しました。', response.status, error);
   }
 }
 
