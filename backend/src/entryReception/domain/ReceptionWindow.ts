@@ -33,18 +33,15 @@ class ReceptionWindow {
 
     const eventEnd = period.endDate;
     const normalizedStart = normalizeToDateOnly(this.start);
+    const normalizedEnd = normalizeToDateOnly(this.end);
 
     if (normalizedStart.getTime() > eventEnd.getTime()) {
       throw new Error('受付開始日時はイベント終了日を超えないように設定してください。');
     }
 
-    if (!this.isBoundaryWithinPeriod(this.end, period)) {
+    if (normalizedEnd.getTime() > eventEnd.getTime()) {
       throw new Error('受付終了日時はイベント終了日までに設定してください。');
     }
-  }
-
-  private isBoundaryWithinPeriod(boundary: Date, period: EventPeriod): boolean {
-    return period.contains(boundary);
   }
 
   public get opensAt(): Date {

@@ -16,6 +16,18 @@ describe('ReceptionWindow', () => {
     expect(() => window.ensureWithin(eventPeriod)).not.toThrow();
   });
 
+  it('単日イベントで受付終了を前日に設定できる', () => {
+    const singleDayPeriod = EventPeriod.createSingleDay(
+      new Date('2025-11-13T00:00:00.000Z')
+    );
+    const window = ReceptionWindow.create(
+      new Date('2025-11-01T09:00:00.000Z'),
+      new Date('2025-11-12T18:00:00.000Z')
+    );
+
+    expect(() => window.ensureWithin(singleDayPeriod)).not.toThrow();
+  });
+
   it('受付開始がイベント終了日を超えるとエラーになる', () => {
     const window = ReceptionWindow.create(
       new Date('2024-05-11T09:00:00.000Z'),
