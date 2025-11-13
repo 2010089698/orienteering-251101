@@ -20,6 +20,12 @@ export const isoDateOnlySchema = z
   .string({ required_error: '日付は必須です。' })
   .refine(isIsoDateOnly, { message: '日付はYYYY-MM-DD形式のISO8601で指定してください。' });
 
+export function isIsoDateTime(value: string): boolean {
+  const parsed = new Date(value);
+
+  return !Number.isNaN(parsed.getTime());
+}
+
 export const raceScheduleDetailSchema = z.object({
   name: z.string({ required_error: 'レース名は必須です。' }).min(1, 'レース名は必須です。'),
   date: isoDateOnlySchema
