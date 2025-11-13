@@ -27,6 +27,12 @@ import TypeOrmEntryReceptionRepository from './entryReception/infrastructure/rep
 import TypeOrmEntryReceptionQueryRepository from './entryReception/infrastructure/repository/TypeOrmEntryReceptionQueryRepository';
 import TypeOrmEventScheduleQueryRepository from './entryReception/infrastructure/repository/TypeOrmEventScheduleQueryRepository';
 import TypeOrmEntryReceptionCreationDefaultsQueryRepository from './entryReception/infrastructure/repository/TypeOrmEntryReceptionCreationDefaultsQueryRepository';
+import GetParticipantEntryOptionsQueryHandler from './participantEntry/application/query/GetParticipantEntryOptionsQueryHandler';
+import SubmitParticipantEntryCommandHandler from './participantEntry/application/command/SubmitParticipantEntryCommandHandler';
+import ParticipantEntryFactory from './participantEntry/domain/ParticipantEntryFactory';
+import ParticipantEntryAcceptanceService from './participantEntry/domain/service/ParticipantEntryAcceptanceService';
+import TypeOrmPublicEntryReceptionQueryRepository from './participantEntry/infrastructure/repository/TypeOrmPublicEntryReceptionQueryRepository';
+import TypeOrmParticipantEntryRepository from './participantEntry/infrastructure/repository/TypeOrmParticipantEntryRepository';
 
 export interface ApplicationDependencies {
   readonly eventDataSource: DataSource;
@@ -68,6 +74,22 @@ function assembleEventModule(app: Express, dependencies: ApplicationDependencies
   const getEntryReceptionCreationDefaultsQueryHandler = new GetEntryReceptionCreationDefaultsQueryHandler(
     entryReceptionCreationDefaultsQueryRepository
   );
+  const publicEntryReceptionQueryRepository = new TypeOrmPublicEntryReceptionQueryRepository(
+    dependencies.eventDataSource
+  );
+  const participantEntryAcceptanceService = new ParticipantEntryAcceptanceService();
+  const participantEntryFactory = new ParticipantEntryFactory(participantEntryAcceptanceService);
+  const participantEntryRepository = new TypeOrmParticipantEntryRepository(
+    dependencies.eventDataSource
+  );
+  const getParticipantEntryOptionsQueryHandler = new GetParticipantEntryOptionsQueryHandler(
+    publicEntryReceptionQueryRepository
+  );
+  const submitParticipantEntryCommandHandler = new SubmitParticipantEntryCommandHandler(
+    participantEntryRepository,
+    publicEntryReceptionQueryRepository,
+    participantEntryFactory
+  );
   const eventController = new EventController(
     createEventUseCase,
     defaultsQueryHandler,
@@ -77,7 +99,9 @@ function assembleEventModule(app: Express, dependencies: ApplicationDependencies
   );
   const publicEventController = new PublicEventController(
     listPublicEventsQueryHandler,
-    getPublicEventDetailQueryHandler
+    getPublicEventDetailQueryHandler,
+    getParticipantEntryOptionsQueryHandler,
+    submitParticipantEntryCommandHandler
   );
   const entryReceptionController = new EntryReceptionController(
     registerEntryReceptionUseCase,
