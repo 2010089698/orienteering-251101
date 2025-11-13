@@ -1,5 +1,5 @@
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import OrganizerEventDetailPage from '../OrganizerEventDetailPage';
 import type { OrganizerEventDetailServiceState } from '../useOrganizerEventDetailService';
@@ -12,6 +12,7 @@ function renderWithState(state: OrganizerEventDetailServiceState) {
           path="/events/:eventId"
           element={<OrganizerEventDetailPage serviceFactory={() => state} />}
         />
+        <Route path="/events/:eventId/entry-receptions" element={<p>管理ページ</p>} />
       </Routes>
     </MemoryRouter>
   );
@@ -92,6 +93,25 @@ describe('OrganizerEventDetailPage', () => {
     expect(screen.getByRole('link', { name: 'エントリー受付を管理' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'スタートリストを管理' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '公開済みリザルトを見る' })).toBeInTheDocument();
+  });
+
+  test('エントリー受付管理リンクから管理ページに遷移できる', async () => {
+    const state: OrganizerEventDetailServiceState = {
+      ...baseState,
+      detail: {
+        ...baseState.detail!,
+        entryReceptionStatus: 'OPEN'
+      }
+    };
+
+    renderWithState(state);
+
+    const user = userEvent.setup();
+    await act(async () => {
+      await user.click(screen.getByRole('link', { name: 'エントリー受付を管理' }));
+    });
+
+    expect(screen.getByText('管理ページ')).toBeInTheDocument();
   });
 
   test('エントリー受付未登録の場合に作成リンクを表示する', () => {
