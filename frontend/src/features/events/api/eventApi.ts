@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 import type { CreateEventRequest, RaceScheduleRequest } from '@shared/event/contracts/CreateEventContract';
 import {
   eventSummaryListResponseSchema,
@@ -22,6 +24,12 @@ import {
   type EntryReceptionPreparationResponse as EntryReceptionPreparationContractResponse,
   type RegisterEntryReceptionRequest
 } from '@shared/event/contracts/EntryReceptionCreateContract';
+import {
+  participantEntrySelectionResponseSchema,
+  type ParticipantEntrySelectionResponse,
+  registerParticipantEntryRequestSchema,
+  type RegisterParticipantEntryRequest
+} from '@shared/event/contracts/ParticipantEntryContract';
 
 export interface EventCreationDefaultsResponse {
   dateFormat: string;
@@ -57,6 +65,16 @@ export type EntryReceptionCreationDefaultsResponse = EntryReceptionCreationDefau
 export type EntryReceptionPreparationResponse = EntryReceptionPreparationContractResponse;
 
 export type RegisterEntryReceptionRequestDto = RegisterEntryReceptionRequest;
+
+export type ParticipantEntrySelectionResponseDto = ParticipantEntrySelectionResponse;
+
+export type RegisterParticipantEntryRequestDto = RegisterParticipantEntryRequest;
+
+const participantEntrySubmissionResponseSchema = z.object({
+  message: z.string({ required_error: 'メッセージは必須です。' }).min(1, 'メッセージは必須です。')
+});
+
+export type ParticipantEntrySubmissionResponseDto = z.infer<typeof participantEntrySubmissionResponseSchema>;
 
 export interface EntryReceptionCreateResponseDto {
   eventId: string;
@@ -399,4 +417,83 @@ export async function postEntryReception(
   });
 
   return handleResponse<EntryReceptionCreateResponseDto>(response);
+}
+
+export async function fetchParticipantEntryOptions(
+  eventId: string,
+  raceId: string,
+  signal?: AbortSignal
+): Promise<ParticipantEntrySelectionResponseDto> {
+  if (!eventId || eventId.trim().length === 0) {
+    throw new EventApiError('イベントIDを指定してください。', 400, {
+      reason: 'MISSING_EVENT_ID'
+    });
+  }
+
+  if (!raceId || raceId.trim().length === 0) {
+    throw new EventApiError('レースIDを指定してください。', 400, {
+      reason: 'MISSING_RACE_ID'
+    });
+  }
+
+  const response = await fetch(
+    buildApiUrl(
+      `/public/events/${encodeURIComponent(eventId)}/entry-options?raceId=${encodeURIComponent(raceId)}`
+    ),
+    {
+      method: 'GET',
+      signal
+    }
+  );
+
+  const payload = await handleResponse<unknown>(response);
+
+  try {
+    return participantEntrySelectionResponseSchema.parse(payload);
+  } catch (error) {
+    throw new EventApiError('参加者エントリーオプションのレスポンス解析に失敗しました。', response.status, error);
+  }
+}
+
+export async function submitParticipantEntry(
+  eventId: string,
+  request: RegisterParticipantEntryRequestDto,
+  signal?: AbortSignal
+): Promise<ParticipantEntrySubmissionResponseDto> {
+  if (!eventId || eventId.trim().length === 0) {
+    throw new EventApiError('イベントIDを指定してください。', 400, {
+      reason: 'MISSING_EVENT_ID'
+    });
+  }
+
+  let validatedRequest: RegisterParticipantEntryRequestDto;
+
+  try {
+    validatedRequest = registerParticipantEntryRequestSchema.parse(request);
+  } catch (error) {
+    throw new EventApiError('参加者エントリーリクエストの検証に失敗しました。', 400, error);
+  }
+
+  if (validatedRequest.eventId !== eventId) {
+    throw new EventApiError('イベントIDが一致しません。', 400, {
+      reason: 'EVENT_ID_MISMATCH',
+      pathEventId: eventId,
+      payloadEventId: validatedRequest.eventId
+    });
+  }
+
+  const response = await fetch(buildApiUrl(`/public/events/${encodeURIComponent(eventId)}/entry`), {
+    method: 'POST',
+    headers: JSON_HEADERS,
+    body: JSON.stringify(validatedRequest),
+    signal
+  });
+
+  const payload = await handleResponse<unknown>(response);
+
+  try {
+    return participantEntrySubmissionResponseSchema.parse(payload);
+  } catch (error) {
+    throw new EventApiError('参加者エントリー送信レスポンスの解析に失敗しました。', response.status, error);
+  }
 }
