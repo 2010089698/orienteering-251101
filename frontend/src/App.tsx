@@ -8,6 +8,7 @@ import OrganizerEventListPage from './features/events/list/OrganizerEventListPag
 import ParticipantEventListPage from './features/events/list/ParticipantEventListPage';
 import EntryReceptionCreatePage from './features/events/entryReception/create/EntryReceptionCreatePage';
 import EntryReceptionManagementPage from './features/events/entryReception/manage/EntryReceptionManagementPage';
+import ParticipantEntryCreatePage from './features/events/entry/create/ParticipantEntryCreatePage';
 
 const App: React.FC = () => (
   <Routes>
@@ -25,6 +26,10 @@ const App: React.FC = () => (
     />
     <Route path="/public/events" element={<ParticipantEventListPage />} />
     <Route path="/public/events/:eventId" element={<ParticipantEventDetailPage />} />
+    <Route
+      path="/public/events/:eventId/entries/new"
+      element={<ParticipantEntryCreatePage />}
+    />
   </Routes>
 );
 

@@ -102,7 +102,9 @@ const ParticipantEventDetailPage = ({
           <h2>参加者向け情報</h2>
           <div>
             {detail.entryReceptionStatus === 'OPEN' ? (
-              <button type="button">エントリーする</button>
+              <Link to={`/public/events/${detail.eventId}/entries/new`}>
+                エントリーする
+              </Link>
             ) : (
               <p>エントリー受付は現在ご利用いただけません。</p>
             )}
