@@ -60,6 +60,7 @@ export type ParticipantEntrySelectionResponse = z.infer<
 
 export const participantEntryApplicantSchema = z.object({
   name: createRequiredStringSchema('参加者氏名は必須です。'),
+  email: createRequiredStringSchema('参加者メールアドレスは必須です。'),
   organization: z.string().optional(),
   cardNumber: z.string().optional()
 });
