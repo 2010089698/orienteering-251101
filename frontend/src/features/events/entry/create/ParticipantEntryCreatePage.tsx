@@ -43,12 +43,14 @@ const ParticipantEntryCreatePage = ({
   const participantErrors = formState.errors.participant;
 
   const participantNameError = participantErrors?.name?.message;
+  const participantEmailError = participantErrors?.email?.message;
   const participantOrganizationError = participantErrors?.organization?.message;
   const participantCardNumberError = participantErrors?.cardNumber?.message;
 
   const raceFieldRegistration = register('raceId');
   const classFieldRegistration = register('classId');
   const participantNameRegistration = register('participant.name');
+  const participantEmailRegistration = register('participant.email');
   const participantOrganizationRegistration = register('participant.organization');
   const participantCardNumberRegistration = register('participant.cardNumber');
 
@@ -217,6 +219,24 @@ const ParticipantEntryCreatePage = ({
               {participantNameError && (
                 <p role="alert" id="participant-entry-name-error">
                   {participantNameError}
+                </p>
+              )}
+            </div>
+            <div>
+              <label htmlFor="participant-entry-email">メールアドレス</label>
+              <input
+                id="participant-entry-email"
+                type="email"
+                {...participantEmailRegistration}
+                onChange={(event) => {
+                  resetSubmitError();
+                  participantEmailRegistration.onChange(event);
+                }}
+                disabled={isSubmitting}
+              />
+              {participantEmailError && (
+                <p role="alert" id="participant-entry-email-error">
+                  {participantEmailError}
                 </p>
               )}
             </div>
