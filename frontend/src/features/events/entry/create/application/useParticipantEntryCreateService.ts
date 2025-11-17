@@ -23,6 +23,10 @@ const participantEntryFormSchema = z.object({
   classId: z.string().min(1, 'クラスを選択してください。'),
   participant: z.object({
     name: z.string().min(1, '参加者氏名を入力してください。'),
+    email: z
+      .string()
+      .min(1, 'メールアドレスを入力してください。')
+      .email('メールアドレスは正しく入力してください。'),
     organization: z.string().optional(),
     cardNumber: z.string().optional()
   })
@@ -35,6 +39,7 @@ const DEFAULT_FORM_VALUES: ParticipantEntryCreateFormValues = {
   classId: '',
   participant: {
     name: '',
+    email: '',
     organization: '',
     cardNumber: ''
   }
@@ -121,6 +126,7 @@ function mapToRequest(
     classId: values.classId,
     participant: {
       name: values.participant.name,
+      email: values.participant.email,
       organization: normalizeOptional(values.participant.organization),
       cardNumber: normalizeOptional(values.participant.cardNumber)
     }

@@ -177,6 +177,8 @@ describe('ParticipantEntryCreatePage', () => {
 
     const participantName = await screen.findByRole('textbox', { name: '氏名' });
     fireEvent.change(participantName, { target: { value: '参加者 太郎' } });
+    const participantEmail = screen.getByRole('textbox', { name: 'メールアドレス' });
+    fireEvent.change(participantEmail, { target: { value: 'taro@example.com' } });
 
     const form = participantName.closest('form');
     await act(async () => {
@@ -185,5 +187,31 @@ describe('ParticipantEntryCreatePage', () => {
 
     expect(onSubmitMock).toHaveBeenCalled();
     expect(await screen.findByText('イベント詳細ページ')).toBeInTheDocument();
+  });
+
+  it('メールアドレスのバリデーションエラーを表示する', async () => {
+    const serviceFactory = createStubServiceFactory({
+      configureForm: (form) => {
+        form.setError('participant.email', {
+          type: 'manual',
+          message: 'メールアドレスは必須です。'
+        });
+      }
+    });
+
+    await act(async () => {
+      render(
+        <MemoryRouter initialEntries={['/public/events/event-1/entries/new']}>
+          <Routes>
+            <Route
+              path="/public/events/:eventId/entries/new"
+              element={<ParticipantEntryCreatePage serviceFactory={serviceFactory} />}
+            />
+          </Routes>
+        </MemoryRouter>
+      );
+    });
+
+    expect(await screen.findByText('メールアドレスは必須です。')).toBeInTheDocument();
   });
 });
