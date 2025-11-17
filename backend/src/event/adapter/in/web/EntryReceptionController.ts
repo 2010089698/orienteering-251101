@@ -32,10 +32,10 @@ import EntryReceptionStatusCalculator, {
   EntryReceptionPeriod,
   EntryReceptionStatus
 } from '../../../domain/service/EntryReceptionStatusCalculator';
-
-const entryReceptionStatusCalculator = new EntryReceptionStatusCalculator();
 import HttpValidationError from './errors/HttpValidationError';
 import { mapValidationErrors } from './support/validation';
+
+const entryReceptionStatusCalculator = new EntryReceptionStatusCalculator();
 
 export class EntryReceptionClassDto {
   @IsString({ message: 'エントリークラスIDは文字列で指定してください。' })
