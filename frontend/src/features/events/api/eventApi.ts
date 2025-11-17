@@ -482,7 +482,7 @@ export async function submitParticipantEntry(
     });
   }
 
-  const response = await fetch(buildApiUrl(`/public/events/${encodeURIComponent(eventId)}/entry`), {
+  const response = await fetch(buildApiUrl(`/public/events/${encodeURIComponent(eventId)}/entries`), {
     method: 'POST',
     headers: JSON_HEADERS,
     body: JSON.stringify(validatedRequest),
