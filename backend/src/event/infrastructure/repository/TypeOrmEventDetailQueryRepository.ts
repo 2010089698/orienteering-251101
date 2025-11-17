@@ -4,31 +4,11 @@ import EventDetailQueryRepository from '../../application/port/out/EventDetailQu
 import OrganizerEventDetailResponseDto, {
   RaceScheduleDetailDto
 } from '../../application/query/OrganizerEventDetailResponseDto';
+import EntryReceptionStatusCalculator from '../../domain/service/EntryReceptionStatusCalculator';
 import { EventEntity } from './EventEntity';
 import EntryReceptionEntity from '../../../entryReception/infrastructure/repository/EntryReceptionEntity';
 
-type EntryReceptionStatus =
-  | 'NOT_REGISTERED'
-  | 'OPEN'
-  | 'CLOSED';
-
-function determineEntryReceptionStatus(
-  receptions: EntryReceptionEntity[],
-  referenceDate: Date
-): EntryReceptionStatus {
-  if (receptions.length === 0) {
-    return 'NOT_REGISTERED';
-  }
-
-  const now = referenceDate.getTime();
-  const isOpen = receptions.some((reception) => {
-    const start = reception.receptionStart.getTime();
-    const end = reception.receptionEnd.getTime();
-    return start <= now && now <= end;
-  });
-
-  return isOpen ? 'OPEN' : 'CLOSED';
-}
+const entryReceptionStatusCalculator = new EntryReceptionStatusCalculator();
 
 export class TypeOrmEventDetailQueryRepository implements EventDetailQueryRepository {
   public constructor(private readonly dataSource: DataSource) {}
@@ -61,8 +41,11 @@ export class TypeOrmEventDetailQueryRepository implements EventDetailQueryReposi
       where: { eventId },
     });
 
-    const entryReceptionStatus = determineEntryReceptionStatus(
-      entryReceptions,
+    const entryReceptionStatus = entryReceptionStatusCalculator.determineStatus(
+      entryReceptions.map((reception) => ({
+        start: reception.receptionStart,
+        end: reception.receptionEnd
+      })),
       new Date()
     );
 

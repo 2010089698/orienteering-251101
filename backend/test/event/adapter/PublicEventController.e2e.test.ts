@@ -101,6 +101,26 @@ describe('PublicEventController (E2E)', () => {
     expect(repository.receivedConditions).toHaveLength(1);
   });
 
+  it('GET /public/events/:eventId 正常系: 受付期間が開いている場合に OPEN を返す', async () => {
+    (detailHandlerMock.execute as jest.Mock).mockResolvedValue({
+      eventId: 'event-1',
+      eventName: '公開イベント1',
+      startDate: '2024-06-01',
+      endDate: '2024-06-01',
+      isMultiDayEvent: false,
+      isMultiRaceEvent: false,
+      raceSchedules: [{ name: 'DAY1', date: '2024-06-01' }],
+      entryReceptionStatus: 'OPEN',
+      startListStatus: 'NOT_CREATED',
+      resultPublicationStatus: 'NOT_PUBLISHED'
+    });
+
+    const response = await request(app).get('/public/events/event-1');
+
+    expect(response.status).toBe(200);
+    expect(response.body.entryReceptionStatus).toBe('OPEN');
+  });
+
   it('GET /public/events 正常系: クエリパラメータから検索条件を構築する', async () => {
     const response = await request(app)
       .get('/public/events')

@@ -4,7 +4,11 @@ import PublicEventDetailQueryRepository from '../../application/port/out/PublicE
 import PublicEventDetailResponseDto, {
   PublicRaceScheduleDetailDto
 } from '../../application/query/participant/PublicEventDetailResponseDto';
+import EntryReceptionStatusCalculator from '../../domain/service/EntryReceptionStatusCalculator';
 import { EventEntity } from './EventEntity';
+import EntryReceptionEntity from '../../../entryReception/infrastructure/repository/EntryReceptionEntity';
+
+const entryReceptionStatusCalculator = new EntryReceptionStatusCalculator();
 
 export class TypeOrmPublicEventDetailQueryRepository
   implements PublicEventDetailQueryRepository
@@ -35,6 +39,19 @@ export class TypeOrmPublicEventDetailQueryRepository
       }))
       .sort((left, right) => left.scheduledDate.getTime() - right.scheduledDate.getTime());
 
+    const entryReceptionRepository = this.dataSource.getRepository(EntryReceptionEntity);
+    const entryReceptions = await entryReceptionRepository.find({
+      where: { eventId },
+    });
+
+    const entryReceptionStatus = entryReceptionStatusCalculator.determineStatus(
+      entryReceptions.map((reception) => ({
+        start: reception.receptionStart,
+        end: reception.receptionEnd,
+      })),
+      new Date()
+    );
+
     return {
       id: event.id,
       name: event.name,
@@ -43,7 +60,7 @@ export class TypeOrmPublicEventDetailQueryRepository
       isMultiDay: event.isMultiDay,
       isMultiRace: event.isMultiRace,
       raceSchedules,
-      entryReceptionStatus: 'NOT_REGISTERED',
+      entryReceptionStatus,
       startListStatus: 'NOT_CREATED',
       resultPublicationStatus: 'NOT_PUBLISHED'
     } satisfies PublicEventDetailResponseDto;
