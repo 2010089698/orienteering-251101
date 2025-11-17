@@ -28,6 +28,12 @@ import EntryReceptionCreationDefaultsResponseDto, {
   EntryReceptionClassTemplateDto as CreationDefaultsClassTemplateDto,
   EntryReceptionRaceDefaultsDto as CreationDefaultsRaceDefaultsDto
 } from '../../../../entryReception/application/query/EntryReceptionCreationDefaultsResponseDto';
+import EntryReceptionStatusCalculator, {
+  EntryReceptionPeriod,
+  EntryReceptionStatus
+} from '../../../domain/service/EntryReceptionStatusCalculator';
+
+const entryReceptionStatusCalculator = new EntryReceptionStatusCalculator();
 import HttpValidationError from './errors/HttpValidationError';
 import { mapValidationErrors } from './support/validation';
 
@@ -62,26 +68,6 @@ export class RegisterEntryReceptionRequestDto {
   @ValidateNested({ each: true })
   @Type(() => EntryReceptionClassDto)
   public entryClasses!: EntryReceptionClassDto[];
-}
-
-type EntryReceptionStatus = 'NOT_REGISTERED' | 'OPEN' | 'CLOSED';
-
-function determineEntryReceptionStatus(
-  raceReceptions: ReadonlyArray<RaceEntryReceptionDto>,
-  referenceDate: Date
-): EntryReceptionStatus {
-  if (raceReceptions.length === 0) {
-    return 'NOT_REGISTERED';
-  }
-
-  const now = referenceDate.getTime();
-  const isOpen = raceReceptions.some((reception) => {
-    const opensAt = reception.receptionStart.getTime();
-    const closesAt = reception.receptionEnd.getTime();
-    return opensAt <= now && now <= closesAt;
-  });
-
-  return isOpen ? 'OPEN' : 'CLOSED';
 }
 
 interface PresentedEntryReceptionClass {
@@ -136,6 +122,12 @@ function presentEntryReceptionPreparation(
   preparation: EntryReceptionPreparationResponseDto,
   referenceDate: Date
 ): PresentedEntryReceptionPreparationResponse {
+  const receptionPeriods: EntryReceptionPeriod[] = preparation.raceReceptions.map(
+    (reception) => ({
+      start: reception.receptionStart,
+      end: reception.receptionEnd
+    })
+  );
   const raceReceptions: PresentedRaceEntryReception[] = preparation.raceReceptions.map((raceReception) => ({
     raceId: raceReception.raceId,
     receptionStart: raceReception.receptionStart.toISOString(),
@@ -149,7 +141,10 @@ function presentEntryReceptionPreparation(
 
   return {
     eventId: preparation.eventId,
-    entryReceptionStatus: determineEntryReceptionStatus(preparation.raceReceptions, referenceDate),
+    entryReceptionStatus: entryReceptionStatusCalculator.determineStatus(
+      receptionPeriods,
+      referenceDate
+    ),
     raceReceptions
   };
 }

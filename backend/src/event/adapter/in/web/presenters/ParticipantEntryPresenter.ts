@@ -2,8 +2,12 @@ import type { ParticipantEntrySelectionResponse } from '@shared/event/contracts/
 import type { PublicEventDetailResponse } from '@shared/event/contracts/PublicEventDetailContract';
 
 import ParticipantEntryOptionsResponseDto from '../../../../../participantEntry/application/query/ParticipantEntryOptionsResponseDto';
+import EntryReceptionStatusCalculator, {
+  EntryReceptionPeriod,
+  EntryReceptionStatus
+} from '../../../../domain/service/EntryReceptionStatusCalculator';
 
-type EntryReceptionStatus = ParticipantEntrySelectionResponse['entryReceptionStatus'];
+const entryReceptionStatusCalculator = new EntryReceptionStatusCalculator();
 
 function formatDateOnly(date: Date): string {
   return date.toISOString().split('T')[0];
@@ -22,16 +26,12 @@ function determineEntryReceptionStatus(
     return currentStatus;
   }
 
-  const { opensAt, closesAt } = options.receptionWindow;
-  const now = referenceDate.getTime();
-  const start = opensAt.getTime();
-  const end = closesAt.getTime();
+  const receptionWindow: EntryReceptionPeriod = {
+    start: options.receptionWindow.opensAt,
+    end: options.receptionWindow.closesAt
+  };
 
-  if (start <= now && now <= end) {
-    return 'OPEN';
-  }
-
-  return 'CLOSED';
+  return entryReceptionStatusCalculator.determineStatus([receptionWindow], referenceDate);
 }
 
 function determineRaceDate(
