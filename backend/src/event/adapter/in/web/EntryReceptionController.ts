@@ -32,6 +32,13 @@ import EntryReceptionStatusCalculator, {
   EntryReceptionPeriod,
   EntryReceptionStatus
 } from '../../../domain/service/EntryReceptionStatusCalculator';
+import ListParticipantEntriesQuery from '../../../../participantEntry/application/query/ListParticipantEntriesQuery';
+import ListParticipantEntriesQueryHandler from '../../../../participantEntry/application/query/ListParticipantEntriesQueryHandler';
+import ParticipantEntriesResponseDto, {
+  ParticipantEntryClassListDto,
+  ParticipantEntryListItemDto,
+  ParticipantEntryRaceListDto
+} from '../../../../participantEntry/application/query/ParticipantEntriesResponseDto';
 
 const entryReceptionStatusCalculator = new EntryReceptionStatusCalculator();
 import HttpValidationError from './errors/HttpValidationError';
@@ -110,6 +117,35 @@ interface PresentedEntryReceptionCreationDefaultsResponse {
   readonly races: ReadonlyArray<PresentedEntryReceptionRaceDefaults>;
 }
 
+interface PresentedEntryReceptionParticipant {
+  readonly entryId: string;
+  readonly name: string;
+  readonly email: string;
+  readonly submittedAt: string;
+}
+
+interface PresentedEntryReceptionParticipantsClass {
+  readonly classId: string;
+  readonly className: string;
+  readonly capacity?: number;
+  readonly participantCount: number;
+  readonly participants: ReadonlyArray<PresentedEntryReceptionParticipant>;
+}
+
+interface PresentedEntryReceptionParticipantsRace {
+  readonly raceId: string;
+  readonly raceName: string;
+  readonly participantCount: number;
+  readonly entryClasses: ReadonlyArray<PresentedEntryReceptionParticipantsClass>;
+}
+
+interface PresentedEntryReceptionParticipantsResponse {
+  readonly eventId: string;
+  readonly eventName: string;
+  readonly totalParticipants: number;
+  readonly races: ReadonlyArray<PresentedEntryReceptionParticipantsRace>;
+}
+
 function formatOptionalDate(value?: Date): string | undefined {
   return value ? value.toISOString() : undefined;
 }
@@ -176,13 +212,49 @@ function presentEntryReceptionCreationDefaults(
   };
 }
 
+function presentEntryReceptionParticipants(
+  participants: ParticipantEntriesResponseDto
+): PresentedEntryReceptionParticipantsResponse {
+  const races: PresentedEntryReceptionParticipantsRace[] = participants.races.map(
+    (race: ParticipantEntryRaceListDto) => ({
+      raceId: race.raceId,
+      raceName: race.raceName,
+      participantCount: race.participantCount,
+      entryClasses: race.entryClasses.map(
+        (entryClass: ParticipantEntryClassListDto): PresentedEntryReceptionParticipantsClass => ({
+          classId: entryClass.classId,
+          className: entryClass.className,
+          capacity: entryClass.capacity,
+          participantCount: entryClass.participantCount,
+          participants: entryClass.participants.map(
+            (participant: ParticipantEntryListItemDto): PresentedEntryReceptionParticipant => ({
+              entryId: participant.entryId,
+              name: participant.name,
+              email: participant.email,
+              submittedAt: participant.submittedAt.toISOString()
+            })
+          )
+        })
+      )
+    })
+  );
+
+  return {
+    eventId: participants.eventId,
+    eventName: participants.eventName,
+    totalParticipants: participants.totalParticipants,
+    races
+  } satisfies PresentedEntryReceptionParticipantsResponse;
+}
+
 export class EntryReceptionController {
   public readonly router: Router;
 
   public constructor(
     private readonly registerEntryReceptionUseCase: RegisterEntryReceptionUseCase,
     private readonly entryReceptionPreparationQueryHandler: GetEntryReceptionPreparationQueryHandler,
-    private readonly entryReceptionCreationDefaultsQueryHandler: GetEntryReceptionCreationDefaultsQueryHandler
+    private readonly entryReceptionCreationDefaultsQueryHandler: GetEntryReceptionCreationDefaultsQueryHandler,
+    private readonly listParticipantEntriesQueryHandler: ListParticipantEntriesQueryHandler
   ) {
     this.router = Router();
     this.router.get(
@@ -193,10 +265,45 @@ export class EntryReceptionController {
       '/events/:eventId/entry-receptions/create',
       this.handleGetEntryReceptionCreationDefaults.bind(this)
     );
+    this.router.get(
+      '/events/:eventId/entry-receptions/participants',
+      this.handleListEntryReceptionParticipants.bind(this)
+    );
     this.router.post(
       '/events/:eventId/entry-receptions',
       this.handleRegisterEntryReception.bind(this)
     );
+  }
+
+  private async handleListEntryReceptionParticipants(
+    request: Request,
+    response: Response
+  ): Promise<void> {
+    try {
+      const { eventId } = request.params;
+      const query = ListParticipantEntriesQuery.forEvent(eventId);
+      const participants = await this.listParticipantEntriesQueryHandler.execute(query);
+      const presented = presentEntryReceptionParticipants(participants);
+
+      response.status(200).json(presented);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        if (error.message === 'イベントIDを指定してください。') {
+          response.status(400).json({ message: error.message });
+          return;
+        }
+
+        if (error.message === '指定されたイベントが見つかりませんでした。') {
+          response.status(404).json({ message: error.message });
+          return;
+        }
+
+        response.status(400).json({ message: error.message });
+        return;
+      }
+
+      response.status(500).json({ message: '不明なエラーが発生しました。' });
+    }
   }
 
   private async handleGetEntryReceptionPreparation(

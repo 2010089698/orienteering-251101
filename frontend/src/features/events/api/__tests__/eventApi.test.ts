@@ -5,7 +5,8 @@ import {
   fetchOrganizerEvents,
   fetchOrganizerEventDetail,
   postPublishEvent,
-  fetchEntryReceptionPreparation
+  fetchEntryReceptionPreparation,
+  fetchEntryReceptionParticipants
 } from '../eventApi';
 import type { CreateEventRequest } from '@shared/event/contracts/CreateEventContract';
 
@@ -219,5 +220,39 @@ describe('eventApi handleResponse', () => {
     global.fetch = jest.fn().mockResolvedValue(response);
 
     await expect(fetchEntryReceptionPreparation('EVT-004')).rejects.toBeInstanceOf(EventApiError);
+  });
+
+  test('参加者一覧APIがイベントID未指定の場合はエラーを投げる', async () => {
+    await expect(fetchEntryReceptionParticipants('')).rejects.toThrow(
+      'イベントIDを指定してください。'
+    );
+  });
+
+  test('参加者一覧APIが契約違反レスポンスを返した場合は例外を投げる', async () => {
+    const response = new Response(JSON.stringify({ invalid: true }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+    global.fetch = jest.fn().mockResolvedValue(response);
+
+    await expect(fetchEntryReceptionParticipants('EVT-005')).rejects.toBeInstanceOf(
+      EventApiError
+    );
+  });
+
+  test('参加者一覧APIが妥当なレスポンスを返した場合は解析結果を返す', async () => {
+    const payload = {
+      eventId: 'EVT-006',
+      eventName: '参加者一覧大会',
+      totalParticipants: 0,
+      races: []
+    } as const;
+    const response = new Response(JSON.stringify(payload), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+    global.fetch = jest.fn().mockResolvedValue(response);
+
+    await expect(fetchEntryReceptionParticipants('EVT-006')).resolves.toEqual(payload);
   });
 });

@@ -9,6 +9,7 @@ import { EventEntity } from '../../../src/event/infrastructure/repository/EventE
 import { RaceScheduleEntity } from '../../../src/event/infrastructure/repository/RaceScheduleEntity';
 import EntryReceptionEntity from '../../../src/entryReception/infrastructure/repository/EntryReceptionEntity';
 import EntryReceptionClassEntity from '../../../src/entryReception/infrastructure/repository/EntryReceptionClassEntity';
+import ParticipantEntryEntity from '../../../src/participantEntry/infrastructure/repository/ParticipantEntryEntity';
 import { createSqliteTestDataSource } from '../../support/createSqliteTestDataSource';
 
 describe('EntryReceptionController', () => {
@@ -89,6 +90,32 @@ describe('EntryReceptionController', () => {
         capacity: entryClass.capacity ?? null
       });
       await entryClassRepository.save(classEntity);
+    }
+  }
+
+  async function seedParticipantEntries(
+    entries: Array<{
+      eventId: string;
+      raceId: string;
+      classId: string;
+      name: string;
+      email: string;
+      submittedAt: Date;
+    }>
+  ): Promise<void> {
+    const participantRepository = dataSource.getRepository(ParticipantEntryEntity);
+
+    for (const entry of entries) {
+      const participant = participantRepository.create({
+        eventId: entry.eventId,
+        raceId: entry.raceId,
+        entryClassId: entry.classId,
+        participantName: entry.name,
+        participantEmail: entry.email,
+        submittedAt: entry.submittedAt
+      });
+
+      await participantRepository.save(participant);
     }
   }
 
@@ -329,6 +356,98 @@ describe('EntryReceptionController', () => {
     expect(response.status).toBe(404);
     expect(response.body).toEqual({
       message: '指定されたイベントが存在しません。'
+    });
+  });
+
+  it('GET /events/:eventId/entry-receptions/participants が参加者情報を返す', async () => {
+    const eventId = 'event-entry-participants';
+    const now = new Date('2024-04-01T00:00:00Z');
+    const eventStart = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const eventEnd = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    await seedEventWithRaces(eventId, '参加者一覧テスト大会', eventStart, eventEnd, [
+      { raceId: 'long', scheduledDate: new Date(now.getTime() + 2 * 60 * 60 * 1000) }
+    ]);
+
+    const receptionStart = new Date(now.getTime() - 60 * 60 * 1000);
+    const receptionEnd = new Date(now.getTime() + 60 * 60 * 1000);
+    await seedEntryReception(eventId, 'long', receptionStart, receptionEnd, [
+      { classId: 'class-1', name: '男子エリート', capacity: 50 },
+      { classId: 'class-2', name: '女子エリート', capacity: 40 }
+    ]);
+
+    await seedParticipantEntries([
+      {
+        eventId,
+        raceId: 'long',
+        classId: 'class-1',
+        name: '山田 太郎',
+        email: 'taro@example.com',
+        submittedAt: new Date('2024-04-01T01:00:00Z')
+      },
+      {
+        eventId,
+        raceId: 'long',
+        classId: 'class-1',
+        name: '佐藤 花子',
+        email: 'hanako@example.com',
+        submittedAt: new Date('2024-04-01T02:00:00Z')
+      }
+    ]);
+
+    const response = await request(app).get(`/events/${eventId}/entry-receptions/participants`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      eventId,
+      eventName: '参加者一覧テスト大会',
+      totalParticipants: 2,
+      races: [
+        {
+          raceId: 'long',
+          raceName: 'long',
+          participantCount: 2,
+          entryClasses: [
+            {
+              classId: 'class-1',
+              className: '男子エリート',
+              capacity: 50,
+              participantCount: 2,
+              participants: [
+                {
+                  entryId: expect.any(String),
+                  name: '山田 太郎',
+                  email: 'taro@example.com',
+                  submittedAt: '2024-04-01T01:00:00.000Z'
+                },
+                {
+                  entryId: expect.any(String),
+                  name: '佐藤 花子',
+                  email: 'hanako@example.com',
+                  submittedAt: '2024-04-01T02:00:00.000Z'
+                }
+              ]
+            },
+            {
+              classId: 'class-2',
+              className: '女子エリート',
+              capacity: 40,
+              participantCount: 0,
+              participants: []
+            }
+          ]
+        }
+      ]
+    });
+  });
+
+  it('GET /events/:eventId/entry-receptions/participants 未登録イベントは404を返す', async () => {
+    const response = await request(app).get(
+      '/events/missing-event/entry-receptions/participants'
+    );
+
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({
+      message: '指定されたイベントが見つかりませんでした。'
     });
   });
 });

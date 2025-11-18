@@ -48,8 +48,33 @@ describe('EntryReceptionManagementPage', () => {
         editButtonLabel: '受付設定を編集'
       },
       participantsPanel: {
+        isEmpty: false,
+        totalParticipantsLabel: '総参加者数: 2名',
+        races: [
+          {
+            raceId: 'RACE-1',
+            label: 'レース1（ID: RACE-1）',
+            participantCountLabel: '参加者数: 2名',
+            classes: [
+              {
+                classId: 'CLS-1',
+                label: '男子エリート（定員 50名）',
+                participantCountLabel: '参加者数: 2名',
+                emptyMessage: 'このクラスの参加者はまだいません。',
+                participants: [
+                  {
+                    entryId: 'ENTRY-1',
+                    name: '山田 太郎',
+                    email: 'taro@example.com',
+                    submittedAtLabel: '2024-04-01T09:00:00Z'
+                  }
+                ]
+              }
+            ]
+          }
+        ],
         emptyMessage: '参加者はまだ登録されていません。',
-        description: 'エントリー受付が開始されると参加者がここに表示されます。'
+        description: '各レース・クラスごとの最新のエントリー状況を確認できます。'
       }
     }
   };
@@ -80,7 +105,9 @@ describe('EntryReceptionManagementPage', () => {
     expect(screen.getByRole('tab', { name: '受付設定' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tabpanel', { name: '受付設定' })).toBeVisible();
     expect(screen.getByRole('button', { name: '受付設定を編集' })).toBeInTheDocument();
-    expect(screen.getByText('男子エリート（定員 50名）')).toBeInTheDocument();
+    expect(screen.getAllByText('男子エリート（定員 50名）')).toHaveLength(2);
+    expect(screen.getByText('総参加者数: 2名')).toBeInTheDocument();
+    expect(screen.getByText('山田 太郎')).toBeInTheDocument();
   });
 
   test('タブの選択操作をコールバックに委譲する', async () => {

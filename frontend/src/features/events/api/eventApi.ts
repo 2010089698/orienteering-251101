@@ -30,6 +30,10 @@ import {
   registerParticipantEntryRequestSchema,
   type RegisterParticipantEntryRequest
 } from '@shared/event/contracts/ParticipantEntryContract';
+import {
+  entryReceptionParticipantsResponseSchema,
+  type EntryReceptionParticipantsResponse
+} from '@shared/event/contracts/EntryReceptionParticipantsContract';
 
 export interface EventCreationDefaultsResponse {
   dateFormat: string;
@@ -69,6 +73,8 @@ export type RegisterEntryReceptionRequestDto = RegisterEntryReceptionRequest;
 export type ParticipantEntrySelectionResponseDto = ParticipantEntrySelectionResponse;
 
 export type RegisterParticipantEntryRequestDto = RegisterParticipantEntryRequest;
+
+export type EntryReceptionParticipantsResponseDto = EntryReceptionParticipantsResponse;
 
 const participantEntrySubmissionResponseSchema = z.object({
   message: z.string({ required_error: 'メッセージは必須です。' }).min(1, 'メッセージは必須です。')
@@ -395,6 +401,33 @@ export async function fetchEntryReceptionPreparation(
     return entryReceptionPreparationResponseSchema.parse(payload);
   } catch (error) {
     throw new EventApiError('エントリー受付情報のレスポンス解析に失敗しました。', response.status, error);
+  }
+}
+
+export async function fetchEntryReceptionParticipants(
+  eventId: string,
+  signal?: AbortSignal
+): Promise<EntryReceptionParticipantsResponseDto> {
+  if (!eventId || eventId.trim().length === 0) {
+    throw new EventApiError('イベントIDを指定してください。', 400, {
+      reason: 'MISSING_EVENT_ID'
+    });
+  }
+
+  const response = await fetch(
+    buildApiUrl(`/events/${encodeURIComponent(eventId)}/entry-receptions/participants`),
+    {
+      method: 'GET',
+      signal
+    }
+  );
+
+  const payload = await handleResponse<unknown>(response);
+
+  try {
+    return entryReceptionParticipantsResponseSchema.parse(payload);
+  } catch (error) {
+    throw new EventApiError('参加者一覧のレスポンス解析に失敗しました。', response.status, error);
   }
 }
 

@@ -1,7 +1,10 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { EventApiError } from '../../../api/eventApi';
 import { useEntryReceptionManagementService } from '../application/useEntryReceptionManagementService';
-import type { EntryReceptionPreparationResponse } from '../../../api/eventApi';
+import type {
+  EntryReceptionPreparationResponse,
+  EntryReceptionParticipantsResponse
+} from '../../../api/eventApi';
 
 describe('useEntryReceptionManagementService', () => {
   const preparation: EntryReceptionPreparationResponse = {
@@ -15,6 +18,41 @@ describe('useEntryReceptionManagementService', () => {
         entryClasses: [
           { classId: 'CLS-1', name: '男子エリート', capacity: 50 },
           { classId: 'CLS-2', name: '女子エリート' }
+        ]
+      }
+    ]
+  };
+
+  const participants: EntryReceptionParticipantsResponse = {
+    eventId: 'EVT-001',
+    eventName: '春の大会',
+    totalParticipants: 2,
+    races: [
+      {
+        raceId: 'RACE-1',
+        raceName: 'RACE-1',
+        participantCount: 2,
+        entryClasses: [
+          {
+            classId: 'CLS-1',
+            className: '男子エリート',
+            capacity: 50,
+            participantCount: 2,
+            participants: [
+              {
+                entryId: 'ENTRY-1',
+                name: '山田 太郎',
+                email: 'taro@example.com',
+                submittedAt: '2024-04-01T09:00:00Z'
+              },
+              {
+                entryId: 'ENTRY-2',
+                name: '佐藤 花子',
+                email: 'hanako@example.com',
+                submittedAt: '2024-04-01T10:00:00Z'
+              }
+            ]
+          }
         ]
       }
     ]
@@ -40,23 +78,31 @@ describe('useEntryReceptionManagementService', () => {
     const fetchEntryReceptionPreparation = jest
       .fn()
       .mockRejectedValue(new EventApiError('取得に失敗しました。', 500));
+    const fetchEntryReceptionParticipants = jest
+      .fn()
+      .mockRejectedValue(new EventApiError('取得に失敗しました。', 500));
 
     const { result } = renderHook(() =>
       useEntryReceptionManagementService({
         eventId: 'EVT-001',
         eventName: '春の大会',
         gateway: {
-          fetchEntryReceptionPreparation
+          fetchEntryReceptionPreparation,
+          fetchEntryReceptionParticipants
         }
       })
     );
 
     await waitFor(() => {
-      expect(result.current.loading).toBe(false);
+      expect(result.current.error).toBe('取得に失敗しました。');
     });
 
     expect(fetchEntryReceptionPreparation).toHaveBeenCalledWith('EVT-001', expect.any(AbortSignal));
-    expect(result.current.error).toBe('取得に失敗しました。');
+    expect(fetchEntryReceptionParticipants).toHaveBeenCalledWith(
+      'EVT-001',
+      expect.any(AbortSignal)
+    );
+    expect(result.current.loading).toBe(false);
     expect(result.current.viewModel).toBeNull();
   });
 
@@ -68,13 +114,14 @@ describe('useEntryReceptionManagementService', () => {
         eventId: 'EVT-001',
         eventName: '春の大会',
         gateway: {
-          fetchEntryReceptionPreparation
+          fetchEntryReceptionPreparation,
+          fetchEntryReceptionParticipants: jest.fn().mockResolvedValue(participants)
         }
       })
     );
 
     await waitFor(() => {
-      expect(result.current.loading).toBe(false);
+      expect(result.current.viewModel).not.toBeNull();
     });
 
     expect(result.current.error).toBeNull();
@@ -92,7 +139,8 @@ describe('useEntryReceptionManagementService', () => {
         receptionPeriodLabel: '受付期間: 2024-04-01T09:00:00+09:00 〜 2024-04-10T18:00:00+09:00'
       })
     ]);
-    expect(viewModel?.participantsPanel.emptyMessage).toBe('参加者はまだ登録されていません。');
+    expect(viewModel?.participantsPanel.totalParticipantsLabel).toBe('総参加者数: 2名');
+    expect(viewModel?.participantsPanel.races[0]?.participantCountLabel).toBe('参加者数: 2名');
 
     act(() => {
       viewModel?.selectTab('PARTICIPANTS');
@@ -102,15 +150,15 @@ describe('useEntryReceptionManagementService', () => {
   });
 
   test('再試行でAPI呼び出しを繰り返す', async () => {
-    const fetchEntryReceptionPreparation = jest
-      .fn()
-      .mockResolvedValue(preparation);
+    const fetchEntryReceptionPreparation = jest.fn().mockResolvedValue(preparation);
+    const fetchEntryReceptionParticipants = jest.fn().mockResolvedValue(participants);
 
     const { result } = renderHook(() =>
       useEntryReceptionManagementService({
         eventId: 'EVT-001',
         gateway: {
-          fetchEntryReceptionPreparation
+          fetchEntryReceptionPreparation,
+          fetchEntryReceptionParticipants
         }
       })
     );
@@ -120,6 +168,7 @@ describe('useEntryReceptionManagementService', () => {
     });
 
     expect(fetchEntryReceptionPreparation).toHaveBeenCalledTimes(1);
+    expect(fetchEntryReceptionParticipants).toHaveBeenCalledTimes(1);
 
     act(() => {
       result.current.retry();
@@ -127,6 +176,7 @@ describe('useEntryReceptionManagementService', () => {
 
     await waitFor(() => {
       expect(fetchEntryReceptionPreparation).toHaveBeenCalledTimes(2);
+      expect(fetchEntryReceptionParticipants).toHaveBeenCalledTimes(2);
     });
   });
 });
