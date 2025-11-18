@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   EventApiError,
   fetchEntryReceptionPreparation,
-  type EntryReceptionPreparationResponse
+  fetchEntryReceptionParticipants,
+  type EntryReceptionPreparationResponse,
+  type EntryReceptionParticipantsResponse
 } from '../../../api/eventApi';
 
 export interface EntryReceptionManagementGateway {
@@ -10,6 +12,10 @@ export interface EntryReceptionManagementGateway {
     eventId: string,
     signal?: AbortSignal
   ) => Promise<EntryReceptionPreparationResponse>;
+  fetchEntryReceptionParticipants: (
+    eventId: string,
+    signal?: AbortSignal
+  ) => Promise<EntryReceptionParticipantsResponse>;
 }
 
 export interface UseEntryReceptionManagementServiceOptions {
@@ -40,8 +46,33 @@ export interface EntryReceptionManagementSettingsPanelViewModel {
 }
 
 export interface EntryReceptionManagementParticipantsPanelViewModel {
+  isEmpty: boolean;
+  totalParticipantsLabel: string;
+  races: EntryReceptionManagementParticipantsRaceViewModel[];
   emptyMessage: string;
   description: string;
+}
+
+export interface EntryReceptionManagementParticipantsRaceViewModel {
+  raceId: string;
+  label: string;
+  participantCountLabel: string;
+  classes: EntryReceptionManagementParticipantsClassViewModel[];
+}
+
+export interface EntryReceptionManagementParticipantsClassViewModel {
+  classId: string;
+  label: string;
+  participantCountLabel: string;
+  emptyMessage: string;
+  participants: EntryReceptionManagementParticipantsListItemViewModel[];
+}
+
+export interface EntryReceptionManagementParticipantsListItemViewModel {
+  entryId: string;
+  name: string;
+  email: string;
+  submittedAtLabel: string;
 }
 
 export interface EntryReceptionManagementViewModel {
@@ -114,10 +145,43 @@ function toSettingsPanelViewModel(
   };
 }
 
-function createParticipantsPanelViewModel(): EntryReceptionManagementParticipantsPanelViewModel {
+function formatClassLabel(name: string, capacity?: number): string {
+  if (capacity !== undefined) {
+    return `${name}（定員 ${capacity}名）`;
+  }
+
+  return `${name}（定員未設定）`;
+}
+
+function createParticipantsPanelViewModel(
+  participants: EntryReceptionParticipantsResponse
+): EntryReceptionManagementParticipantsPanelViewModel {
+  const races: EntryReceptionManagementParticipantsRaceViewModel[] = participants.races.map(
+    (race, index) => ({
+      raceId: race.raceId,
+      label: `レース${index + 1}（ID: ${race.raceId}）`,
+      participantCountLabel: `参加者数: ${race.participantCount}名`,
+      classes: race.entryClasses.map((entryClass) => ({
+        classId: entryClass.classId,
+        label: formatClassLabel(entryClass.className, entryClass.capacity),
+        participantCountLabel: `参加者数: ${entryClass.participantCount}名`,
+        emptyMessage: 'このクラスの参加者はまだいません。',
+        participants: entryClass.participants.map((participant) => ({
+          entryId: participant.entryId,
+          name: participant.name,
+          email: participant.email,
+          submittedAtLabel: participant.submittedAt
+        }))
+      }))
+    })
+  );
+
   return {
+    isEmpty: participants.totalParticipants === 0,
+    totalParticipantsLabel: `総参加者数: ${participants.totalParticipants}名`,
+    races,
     emptyMessage: '参加者はまだ登録されていません。',
-    description: 'エントリー受付が開始されると参加者がここに表示されます。'
+    description: '各レース・クラスごとの最新のエントリー状況を確認できます。'
   };
 }
 
@@ -127,15 +191,19 @@ export const useEntryReceptionManagementService: EntryReceptionManagementService
   const gateway = useMemo<EntryReceptionManagementGateway>(
     () => ({
       fetchEntryReceptionPreparation:
-        options.gateway?.fetchEntryReceptionPreparation ?? fetchEntryReceptionPreparation
+        options.gateway?.fetchEntryReceptionPreparation ?? fetchEntryReceptionPreparation,
+      fetchEntryReceptionParticipants:
+        options.gateway?.fetchEntryReceptionParticipants ?? fetchEntryReceptionParticipants
     }),
-    [options.gateway?.fetchEntryReceptionPreparation]
+    [options.gateway?.fetchEntryReceptionParticipants, options.gateway?.fetchEntryReceptionPreparation]
   );
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [preparation, setPreparation] =
     useState<EntryReceptionPreparationResponse | null>(null);
+  const [participants, setParticipants] =
+    useState<EntryReceptionParticipantsResponse | null>(null);
   const [refreshToken, setRefreshToken] = useState(0);
   const [activeTab, setActiveTab] = useState<EntryReceptionManagementTabId>('SETTINGS');
 
@@ -152,6 +220,7 @@ export const useEntryReceptionManagementService: EntryReceptionManagementService
       setLoading(false);
       setError('イベントIDが指定されていません。');
       setPreparation(null);
+      setParticipants(null);
       return;
     }
 
@@ -161,13 +230,16 @@ export const useEntryReceptionManagementService: EntryReceptionManagementService
     setLoading(true);
     setError(null);
 
-    gateway
-      .fetchEntryReceptionPreparation(options.eventId, abortController.signal)
-      .then((response) => {
+    Promise.all([
+      gateway.fetchEntryReceptionPreparation(options.eventId, abortController.signal),
+      gateway.fetchEntryReceptionParticipants(options.eventId, abortController.signal)
+    ])
+      .then(([preparationResponse, participantResponse]) => {
         if (!mounted || abortController.signal.aborted) {
           return;
         }
-        setPreparation(response);
+        setPreparation(preparationResponse);
+        setParticipants(participantResponse);
       })
       .catch((caughtError) => {
         if (!mounted || abortController.signal.aborted) {
@@ -179,6 +251,7 @@ export const useEntryReceptionManagementService: EntryReceptionManagementService
             : FALLBACK_ERROR_MESSAGE;
         setError(message);
         setPreparation(null);
+        setParticipants(null);
       })
       .finally(() => {
         if (!mounted || abortController.signal.aborted) {
@@ -198,7 +271,7 @@ export const useEntryReceptionManagementService: EntryReceptionManagementService
   }, [preparation?.eventId]);
 
   const viewModel = useMemo<EntryReceptionManagementViewModel | null>(() => {
-    if (!preparation) {
+    if (!preparation || !participants) {
       return null;
     }
 
@@ -224,9 +297,9 @@ export const useEntryReceptionManagementService: EntryReceptionManagementService
       activeTabId: activeTab,
       selectTab,
       settingsPanel: toSettingsPanelViewModel(preparation),
-      participantsPanel: createParticipantsPanelViewModel()
+      participantsPanel: createParticipantsPanelViewModel(participants)
     };
-  }, [activeTab, options.eventName, preparation, selectTab]);
+  }, [activeTab, options.eventName, participants, preparation, selectTab]);
 
   return {
     loading,

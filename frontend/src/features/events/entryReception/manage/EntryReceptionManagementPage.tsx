@@ -112,7 +112,50 @@ const EntryReceptionManagementPage = ({
             hidden={viewModel.activeTabId !== 'PARTICIPANTS'}
           >
             <h2>参加者</h2>
-            <p>{viewModel.participantsPanel.emptyMessage}</p>
+            {viewModel.participantsPanel.isEmpty ? (
+              <p>{viewModel.participantsPanel.emptyMessage}</p>
+            ) : (
+              <>
+                <p>{viewModel.participantsPanel.totalParticipantsLabel}</p>
+                {viewModel.participantsPanel.races.map((race) => (
+                  <article
+                    key={race.raceId}
+                    aria-labelledby={`${race.raceId}-participants-heading`}
+                  >
+                    <h3 id={`${race.raceId}-participants-heading`}>{race.label}</h3>
+                    <p>{race.participantCountLabel}</p>
+                    {race.classes.map((entryClass) => (
+                      <div key={`${race.raceId}-${entryClass.classId}`}>
+                        <h4>{entryClass.label}</h4>
+                        <p>{entryClass.participantCountLabel}</p>
+                        {entryClass.participants.length > 0 ? (
+                          <table>
+                            <thead>
+                              <tr>
+                                <th scope="col">氏名</th>
+                                <th scope="col">メールアドレス</th>
+                                <th scope="col">申込日時</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {entryClass.participants.map((participant) => (
+                                <tr key={participant.entryId}>
+                                  <td>{participant.name}</td>
+                                  <td>{participant.email}</td>
+                                  <td>{participant.submittedAtLabel}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        ) : (
+                          <p>{entryClass.emptyMessage}</p>
+                        )}
+                      </div>
+                    ))}
+                  </article>
+                ))}
+              </>
+            )}
             <p>{viewModel.participantsPanel.description}</p>
           </section>
         </>
