@@ -148,6 +148,10 @@ class StartListDraft {
     const slots: ParticipantSlot[] = [];
     let sequence = 0;
     let hasRemaining = true;
+    const unusedLaneCountPerWave = Math.max(
+      this.settings.laneCount - orderedAssignments.length,
+      0
+    );
 
     while (hasRemaining) {
       hasRemaining = false;
@@ -169,6 +173,10 @@ class StartListDraft {
         });
         slots.push(slot);
         sequence += 1;
+      }
+
+      if (hasRemaining && unusedLaneCountPerWave > 0) {
+        sequence += unusedLaneCountPerWave;
       }
     }
 
