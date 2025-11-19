@@ -7,6 +7,7 @@ import OrganizerEventDetailResponseDto, {
 import EntryReceptionStatusCalculator from '../../domain/service/EntryReceptionStatusCalculator';
 import { EventEntity } from './EventEntity';
 import EntryReceptionEntity from '../../../entryReception/infrastructure/repository/EntryReceptionEntity';
+import StartListDraftEntity from '../../../startList/infrastructure/repository/StartListDraftEntity';
 
 const entryReceptionStatusCalculator = new EntryReceptionStatusCalculator();
 
@@ -49,6 +50,15 @@ export class TypeOrmEventDetailQueryRepository implements EventDetailQueryReposi
       new Date()
     );
 
+    const startListRepository = this.dataSource.getRepository(StartListDraftEntity);
+    const startLists = await startListRepository.find({ where: { eventId } });
+    const startListStatus: OrganizerEventDetailResponseDto['startListStatus'] =
+      startLists.length === 0
+        ? 'NOT_CREATED'
+        : startLists.some((list) => list.isFinalized)
+          ? 'PUBLISHED'
+          : 'DRAFT';
+
     return {
       id: event.id,
       name: event.name,
@@ -59,7 +69,7 @@ export class TypeOrmEventDetailQueryRepository implements EventDetailQueryReposi
       isPublic: event.isPublic,
       raceSchedules,
       entryReceptionStatus,
-      startListStatus: 'NOT_CREATED',
+      startListStatus,
       resultPublicationStatus: 'NOT_PUBLISHED'
     } satisfies OrganizerEventDetailResponseDto;
   }
