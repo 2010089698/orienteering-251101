@@ -8,6 +8,8 @@ import { RaceScheduleEntity } from '../repository/RaceScheduleEntity';
 import EntryReceptionEntity from '../../../entryReception/infrastructure/repository/EntryReceptionEntity';
 import EntryReceptionClassEntity from '../../../entryReception/infrastructure/repository/EntryReceptionClassEntity';
 import ParticipantEntryEntity from '../../../participantEntry/infrastructure/repository/ParticipantEntryEntity';
+import StartListDraftEntity from '../../../startList/infrastructure/repository/StartListDraftEntity';
+import { CreateStartListDraftTable1717046400000 } from '../../../startList/infrastructure/migration/1717046400000-CreateStartListDraftTable';
 
 export interface DataSourceFactoryOptions {
   readonly databasePath?: string;
@@ -77,7 +79,9 @@ export async function createDataSource(
       EntryReceptionEntity,
       EntryReceptionClassEntity,
       ParticipantEntryEntity,
+      StartListDraftEntity,
     ],
+    migrations: [CreateStartListDraftTable1717046400000],
     synchronize: true,
   });
 
