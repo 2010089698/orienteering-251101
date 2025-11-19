@@ -5,7 +5,8 @@ import { DataSource } from 'typeorm';
 import {
   EntryReceptionController,
   EventController,
-  PublicEventController
+  PublicEventController,
+  StartListController
 } from './event/adapter/in/web';
 import CreateEventUseCase from './event/application/command/CreateEventUseCase';
 import PublishEventUseCase from './event/application/command/PublishEventUseCase';
@@ -35,6 +36,14 @@ import ParticipantEntryAcceptanceService from './participantEntry/domain/service
 import TypeOrmPublicEntryReceptionQueryRepository from './participantEntry/infrastructure/repository/TypeOrmPublicEntryReceptionQueryRepository';
 import TypeOrmParticipantEntryRepository from './participantEntry/infrastructure/repository/TypeOrmParticipantEntryRepository';
 import TypeOrmParticipantEntryQueryRepository from './participantEntry/infrastructure/repository/TypeOrmParticipantEntryQueryRepository';
+import ConfigureStartListUseCase from './startList/application/command/ConfigureStartListUseCase';
+import AssignClassesToLanesUseCase from './startList/application/command/AssignClassesToLanesUseCase';
+import ScheduleParticipantsUseCase from './startList/application/command/ScheduleParticipantsUseCase';
+import FinalizeStartListUseCase from './startList/application/command/FinalizeStartListUseCase';
+import GetStartListDraftQueryHandler from './startList/application/query/GetStartListDraftQueryHandler';
+import TypeOrmStartListRepository from './startList/infrastructure/repository/TypeOrmStartListRepository';
+import TypeOrmEntryReceptionForStartListQueryRepository from './startList/infrastructure/query/TypeOrmEntryReceptionForStartListQueryRepository';
+import TypeOrmParticipantEntriesForStartListQueryRepository from './startList/infrastructure/query/TypeOrmParticipantEntriesForStartListQueryRepository';
 
 export interface ApplicationDependencies {
   readonly eventDataSource: DataSource;
@@ -98,6 +107,22 @@ function assembleEventModule(app: Express, dependencies: ApplicationDependencies
   const listParticipantEntriesQueryHandler = new ListParticipantEntriesQueryHandler(
     participantEntryQueryRepository
   );
+  const startListRepository = new TypeOrmStartListRepository(dependencies.eventDataSource);
+  const entryReceptionForStartListQueryRepository =
+    new TypeOrmEntryReceptionForStartListQueryRepository(dependencies.eventDataSource);
+  const participantEntriesForStartListQueryRepository =
+    new TypeOrmParticipantEntriesForStartListQueryRepository(dependencies.eventDataSource);
+  const configureStartListUseCase = new ConfigureStartListUseCase(startListRepository);
+  const assignClassesToLanesUseCase = new AssignClassesToLanesUseCase(
+    startListRepository,
+    entryReceptionForStartListQueryRepository
+  );
+  const scheduleParticipantsUseCase = new ScheduleParticipantsUseCase(
+    startListRepository,
+    participantEntriesForStartListQueryRepository
+  );
+  const finalizeStartListUseCase = new FinalizeStartListUseCase(startListRepository);
+  const getStartListDraftQueryHandler = new GetStartListDraftQueryHandler(startListRepository);
   const eventController = new EventController(
     createEventUseCase,
     defaultsQueryHandler,
@@ -117,9 +142,17 @@ function assembleEventModule(app: Express, dependencies: ApplicationDependencies
     getEntryReceptionCreationDefaultsQueryHandler,
     listParticipantEntriesQueryHandler
   );
+  const startListController = new StartListController(
+    configureStartListUseCase,
+    assignClassesToLanesUseCase,
+    scheduleParticipantsUseCase,
+    finalizeStartListUseCase,
+    getStartListDraftQueryHandler
+  );
 
   app.use(publicEventController.router);
   app.use(entryReceptionController.router);
+  app.use(startListController.router);
   app.use(eventController.router);
 }
 
