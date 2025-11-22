@@ -5,9 +5,15 @@ import type {
   UseOrganizerEventDetailServiceOptions
 } from './useOrganizerEventDetailService';
 import { useOrganizerEventDetailService } from './useOrganizerEventDetailService';
+import type {
+  StartListNavigationServiceFactory,
+  StartListNavigationServiceState
+} from './useStartListNavigationService';
+import { useStartListNavigationService } from './useStartListNavigationService';
 
 interface OrganizerEventDetailPageProps {
   serviceFactory?: OrganizerEventDetailServiceFactory;
+  startListNavigationFactory?: StartListNavigationServiceFactory;
 }
 
 function resolveService(
@@ -18,12 +24,26 @@ function resolveService(
   return factory(options);
 }
 
+function resolveStartListNavigationService(
+  factory: StartListNavigationServiceFactory,
+  eventId: string
+): StartListNavigationServiceState {
+  return factory({ eventId });
+}
+
 const OrganizerEventDetailPage = ({
-  serviceFactory = useOrganizerEventDetailService
+  serviceFactory = useOrganizerEventDetailService,
+  startListNavigationFactory = useStartListNavigationService
 }: OrganizerEventDetailPageProps) => {
   const { eventId = '' } = useParams<'eventId'>();
   const { detail, loading, error, retry, publishing, publishError, publish } =
     resolveService(serviceFactory, eventId);
+  const {
+    navigating,
+    navigationError,
+    navigateToCreate,
+    navigateToManagement
+  } = resolveStartListNavigationService(startListNavigationFactory, eventId);
   const headingId = 'organizer-event-detail-heading';
 
   return (
@@ -124,11 +144,16 @@ const OrganizerEventDetailPage = ({
           </div>
           <div>
             {detail.startListStatus === 'NOT_CREATED' ? (
-              <button type="button">スタートリストを作成</button>
+              <button type="button" onClick={navigateToCreate} disabled={navigating}>
+                {navigating ? '遷移中...' : 'スタートリストを作成'}
+              </button>
             ) : (
-              <button type="button">スタートリストを管理</button>
+              <button type="button" onClick={navigateToManagement} disabled={navigating}>
+                {navigating ? '遷移中...' : 'スタートリストを管理'}
+              </button>
             )}
           </div>
+          {navigationError && <p role="alert">{navigationError}</p>}
           <div>
             {detail.resultPublicationStatus === 'NOT_PUBLISHED' ? (
               <button type="button">リザルトを公開</button>
