@@ -9,6 +9,8 @@ import ParticipantEventListPage from './features/events/list/ParticipantEventLis
 import EntryReceptionCreatePage from './features/events/entryReception/create/EntryReceptionCreatePage';
 import EntryReceptionManagementPage from './features/events/entryReception/manage/EntryReceptionManagementPage';
 import ParticipantEntryCreatePage from './features/events/entry/create/ParticipantEntryCreatePage';
+import StartListCreatePage from './features/events/startList/StartListCreatePage';
+import StartListManagementPage from './features/events/startList/StartListManagementPage';
 
 const App: React.FC = () => (
   <Routes>
@@ -24,6 +26,11 @@ const App: React.FC = () => (
       path="/events/:eventId/entry-receptions"
       element={<EntryReceptionManagementPage />}
     />
+    <Route
+      path="/events/:eventId/start-lists/create"
+      element={<StartListCreatePage />}
+    />
+    <Route path="/events/:eventId/start-lists" element={<StartListManagementPage />} />
     <Route path="/public/events" element={<ParticipantEventListPage />} />
     <Route path="/public/events/:eventId" element={<ParticipantEventDetailPage />} />
     <Route

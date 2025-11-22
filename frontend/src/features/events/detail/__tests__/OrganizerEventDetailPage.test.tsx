@@ -13,6 +13,8 @@ function renderWithState(state: OrganizerEventDetailServiceState) {
           element={<OrganizerEventDetailPage serviceFactory={() => state} />}
         />
         <Route path="/events/:eventId/entry-receptions" element={<p>管理ページ</p>} />
+        <Route path="/events/:eventId/start-lists/create" element={<p>スタートリスト作成</p>} />
+        <Route path="/events/:eventId/start-lists" element={<p>スタートリスト管理</p>} />
       </Routes>
     </MemoryRouter>
   );
@@ -129,5 +131,35 @@ describe('OrganizerEventDetailPage', () => {
     await userEvent.setup().click(button);
 
     expect(publish).toHaveBeenCalledTimes(1);
+  });
+
+  test('スタートリスト作成ボタンから作成ページに遷移できる', async () => {
+    renderWithState(baseState);
+
+    const user = userEvent.setup();
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'スタートリストを作成' }));
+    });
+
+    expect(screen.getByText('スタートリスト作成')).toBeInTheDocument();
+  });
+
+  test('スタートリスト管理ボタンから管理ページに遷移できる', async () => {
+    const state: OrganizerEventDetailServiceState = {
+      ...baseState,
+      detail: {
+        ...baseState.detail!,
+        startListStatus: 'PUBLISHED'
+      }
+    };
+
+    renderWithState(state);
+
+    const user = userEvent.setup();
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'スタートリストを管理' }));
+    });
+
+    expect(screen.getByText('スタートリスト管理')).toBeInTheDocument();
   });
 });
